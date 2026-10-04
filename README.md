@@ -1,58 +1,73 @@
 # Gym Studio Membership Management Platform
 
-This repository is structured into three dedicated directories for UI, API, and Database:
+Full-stack gym management platform with a React + TypeScript SPA, RESTful API, and an open-source document database.
 
 ```
-├── ui/              # React + TypeScript SPA (Vite, modern styling, Lucide icons)
-├── api/             # Backend API service (Endpoints specification & architecture)
-└── database/        # Database schemas, migrations, and table definitions
+├── ui/              # React + TypeScript SPA (Vite, Lucide icons, glassmorphism theme)
+├── api/             # Express + TypeScript backend REST API
+└── database/        # Open-source document database (NeDB / MongoDB) & seeds
+    ├── data/        # Persistent database files (members.db, studio.db, classes.db)
+    └── seeds/       # Initial seed documents (members.json, studio.json)
 ```
 
 ---
 
-## 🏋️‍♂️ 1. UI (`ui/`)
-A responsive Single Page Application built with **React**, **TypeScript**, and **Vite**.
+## ⚡ Quick Start
 
-### Features
-- **Admin Management Portal**:
-  - Real-time KPI overview (Total Members, Active %, Monthly MRR, Expiring < 30 days, Overdue accounts).
-  - Search members by name, email, phone, or ID.
-  - Multi-criteria filtering by Plan Tier (Basic, Silver, Gold, Platinum, VIP), Status (Active, Expiring Soon, Pending, Expired, Suspended), and Payment Status (Paid, Pending, Overdue).
-  - Add & Edit Member modal with automatic duration presets (+1m, +3m, +6m, +1yr), perks preview, and emergency contact details.
-  - Quick 1-click renewal (+1 Month extension).
-  - Safe deletion dialog with confirmation.
-- **Member Portal**:
-  - Interactive digital wallet gym pass card with barcode, tier gradient, and turnstile scan simulator.
-  - Personal profile & emergency contact editor.
-  - Plan perks list & membership validity details.
-  - Attendance metrics (streak tracker & check-in history).
-  - Studio information (hours, location, contact, concierge).
-  - Facility & recovery amenities showcase (sauna, cold plunge, Olympic platforms, functional turf, juice bar).
-  - Interactive group fitness class schedule with spot reservations.
-  - Studio etiquette & community guidelines.
-- **Stub Data & Persistence**:
-  - Comprehensive seed data for diverse members and gym amenities.
-  - Synchronized with `localStorage` so changes persist across page reloads.
-  - 1-click "Reset Demo Data" button in header.
+### 1. Start the Backend API & Database
+```bash
+cd api
+npm install
+npm run dev
+```
+The API starts on `http://localhost:5000` and automatically connects to the persistent document database in `database/data/`.
 
-### Running the UI
+- Health check: `http://localhost:5000/api/health`
+- Members API: `http://localhost:5000/api/members`
+- Studio API: `http://localhost:5000/api/studio`
+- Classes API: `http://localhost:5000/api/classes`
+
+### 2. Start the Frontend UI
+In a separate terminal:
 ```bash
 cd ui
 npm install
 npm run dev
 ```
-Open `http://localhost:5173` in your browser.
+Open `http://localhost:5173` in your browser. The UI will automatically detect and connect to the live backend API and show a `Live DB` badge in the header.
 
 ---
 
-## 🔌 2. API (`api/`)
-Reserved for the upcoming backend service:
-- Planned REST / GraphQL endpoints for authentication, membership lifecycle, bookings, and studio information.
-- Architecture details and planned endpoints are documented in [`api/README.md`](./api/README.md).
+## 🗄️ Database Architecture
+- **Engine**: Open-Source Document Database (`@seald-io/nedb`) providing full MongoDB-compatible document storage without requiring Docker or an external daemon installed.
+- **Optional MongoDB / Atlas Support**: Simply set `MONGODB_URI` in `api/.env` to point to any remote MongoDB cluster or local MongoDB instance.
+- **Storage**: Persistent collection files stored in `database/data/` (`members.db`, `studio.db`, `classes.db`).
+- **Initial Seeds**: Tracked in `database/seeds/` (`members.json`, `studio.json`).
 
 ---
 
-## 🗄️ 3. Database (`database/`)
-Contains relational database schema definitions:
-- [`database/schema.sql`](./database/schema.sql): Complete SQL schema for users, memberships, plans, studio_info, classes, and check-ins.
-- Readme instructions in [`database/README.md`](./database/README.md).
+## 🔌 API Endpoints Reference
+
+| Method | Endpoint | Description |
+|---|---|---|
+| `GET` | `/api/health` | Health status and database engine info |
+| `GET` | `/api/members` | List members with filters (`search`, `tier`, `status`, `payment`) |
+| `GET` | `/api/members/:id` | Get single member record |
+| `POST` | `/api/members` | Register new member |
+| `PUT` | `/api/members/:id` | Update member or membership subdocument |
+| `DELETE` | `/api/members/:id` | Remove member document |
+| `POST` | `/api/members/:id/renew` | Quick renew (+N months) |
+| `POST` | `/api/members/:id/check-in` | Turnstile NFC scan simulation (updates streak & visit history) |
+| `GET` | `/api/studio` | Studio details, amenities, hours, trainers & announcements |
+| `PUT` | `/api/studio` | Update studio details |
+| `GET` | `/api/classes` | List studio classes with available spots |
+| `POST` | `/api/classes/:id/book` | Reserve spot in a class |
+| `POST` | `/api/classes/:id/cancel` | Cancel class booking |
+| `POST` | `/api/seed/reset` | Reset database back to default seed documents |
+
+---
+
+## 🏋️‍♂️ Frontend Features
+- **Admin Management Portal**: Real-time KPI cards (MRR, Active %, Expirations < 30 days, Overdue accounts), search, multi-filter, member registration & editing modal, duration presets, 1-click renewal, and delete confirmation.
+- **Member Portal**: Interactive digital wallet gym pass with barcode and turnstile scan simulator, personal profile editor, membership perks checklist, workout streak tracker, studio amenities showcase, trainer roster, and interactive class booking.
+- **Resilient Connectivity**: Live API mode with automatic fallback to local cache if the backend is unreachable.

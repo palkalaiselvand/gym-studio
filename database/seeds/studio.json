@@ -1,0 +1,181 @@
+{
+  "name": "APEX ATHLETIC & FITNESS STUDIO",
+  "tagline": "High Performance Training, Wellness & Recovery Sanctuary",
+  "description": "Apex Studio is a cutting-edge athletic training facility offering Olympic weightlifting platforms, functional turf zones, premier recovery suites (infrared sauna and cold plunge pools), and world-class instructor-led classes designed for every fitness stage.",
+  "address": "450 Ironworks Way, Suite 120",
+  "cityStateZip": "Metro City, NY 10001",
+  "phone": "+1 (800) 555-APEX (2739)",
+  "email": "concierge@apexstudio.fit",
+  "website": "https://apexstudio.fit",
+  "hours": {
+    "weekdays": "5:00 AM – 11:00 PM (24/7 for Platinum & VIP)",
+    "saturday": "6:00 AM – 10:00 PM",
+    "sunday": "7:00 AM – 8:00 PM"
+  },
+  "amenities": [
+    {
+      "name": "Olympic Lifting Platforms",
+      "description": "Eleiko competition barbells, calibrated bumper plates, and dual rubber-cushioned platforms.",
+      "icon": "Dumbbell",
+      "highlight": true
+    },
+    {
+      "name": "Contrast Therapy & Spa",
+      "description": "Nordic cedar sauna, infrared therapy rooms, and 45°F plunge baths for rapid cellular recovery.",
+      "icon": "Flame",
+      "highlight": true
+    },
+    {
+      "name": "Functional Turf & Sled Track",
+      "description": "40-yard athletic turf with rogue dog sleds, battle ropes, plyometric boxes, and kettlebell arrays.",
+      "icon": "Zap"
+    },
+    {
+      "name": "Cardio Studio & Wattbikes",
+      "description": "Smart Concept2 rowers, ski ergs, curved woodway treadmills, and Wattbike Atom consoles.",
+      "icon": "Activity"
+    },
+    {
+      "name": "Fuel & Cold-Pressed Juice Bar",
+      "description": "Organic whey/plant protein shakes, electrolytes, artisan espresso, and pre-workout refreshments.",
+      "icon": "Coffee"
+    },
+    {
+      "name": "Executive Locker Suites",
+      "description": "Private rain showers, Malin+Goetz luxury bath products, digital lockers, and steam rooms.",
+      "icon": "ShieldCheck"
+    }
+  ],
+  "trainers": [
+    {
+      "id": "TR-1",
+      "name": "Jordan Cruz, CSCS",
+      "specialty": "Olympic Weightlifting & Biomechanics",
+      "experience": "9+ Years Experience",
+      "bio": "Former collegiate strength coach specializing in lifting ergonomics, explosive power, and post-rehab functional strength.",
+      "avatar": "https://images.unsplash.com/photo-1567013127542-490d757e51fc?auto=format&fit=crop&w=200&q=80"
+    },
+    {
+      "id": "TR-2",
+      "name": "Maya Torres, NASM-CPT",
+      "specialty": "High-Intensity Athletic Conditioning & Mobility",
+      "experience": "7+ Years Experience",
+      "bio": "Known for pulse-raising HIIT programming, kettlebell flow mastery, and metabolic conditioning tailored for all levels.",
+      "avatar": "https://images.unsplash.com/photo-1594381898411-846e7d193883?auto=format&fit=crop&w=200&q=80"
+    },
+    {
+      "id": "TR-3",
+      "name": "Chloe Laurent, E-RYT 500",
+      "specialty": "Vinyasa Power Yoga & Breathwork",
+      "experience": "8+ Years Experience",
+      "bio": "Combines dynamic flow with restorative somatic breathwork to enhance athletic mobility, joint stability, and mental clarity.",
+      "avatar": "https://images.unsplash.com/photo-1548690312-e3b507d8c110?auto=format&fit=crop&w=200&q=80"
+    },
+    {
+      "id": "TR-4",
+      "name": "Tyson Vance",
+      "specialty": "Boxing Technique & Combat Endurance",
+      "experience": "11+ Years Experience",
+      "bio": "Golden Gloves competitor teaching footwork, defensive head movement, heavy bag combinations, and heart-pounding intervals.",
+      "avatar": "https://images.unsplash.com/photo-1583454110551-21f2fa2afe61?auto=format&fit=crop&w=200&q=80"
+    }
+  ],
+  "classes": [
+    {
+      "id": "CLS-1",
+      "name": "Iron Circuit HIIT",
+      "category": "HIIT",
+      "trainer": "Maya Torres",
+      "time": "07:00 AM - 07:50 AM",
+      "days": ["Mon", "Wed", "Fri"],
+      "duration": "50 mins",
+      "capacity": 18,
+      "spotsLeft": 3,
+      "room": "Functional Turf Studio A",
+      "intensity": "High"
+    },
+    {
+      "id": "CLS-2",
+      "name": "Athletic Power & Barbell",
+      "category": "Strength",
+      "trainer": "Jordan Cruz",
+      "time": "08:00 AM - 09:00 AM",
+      "days": ["Tue", "Thu", "Sat"],
+      "duration": "60 mins",
+      "capacity": 12,
+      "spotsLeft": 2,
+      "room": "Olympic Platform Lab",
+      "intensity": "High"
+    },
+    {
+      "id": "CLS-3",
+      "name": "Sunrise Flow & Somatics",
+      "category": "Yoga",
+      "trainer": "Chloe Laurent",
+      "time": "06:30 AM - 07:30 AM",
+      "days": ["Mon", "Wed", "Sat", "Sun"],
+      "duration": "60 mins",
+      "capacity": 20,
+      "spotsLeft": 8,
+      "room": "Zenith Mind-Body Studio",
+      "intensity": "Medium"
+    },
+    {
+      "id": "CLS-4",
+      "name": "Apex Heavy Bag Boxing",
+      "category": "Boxing",
+      "trainer": "Tyson Vance",
+      "time": "05:30 PM - 06:30 PM",
+      "days": ["Mon", "Tue", "Thu"],
+      "duration": "60 mins",
+      "capacity": 16,
+      "spotsLeft": 4,
+      "room": "Combat Zone 2",
+      "intensity": "Extreme"
+    },
+    {
+      "id": "CLS-5",
+      "name": "Rhythm Spin Velocity",
+      "category": "Spin",
+      "trainer": "Maya Torres",
+      "time": "06:45 PM - 07:35 PM",
+      "days": ["Tue", "Thu", "Fri"],
+      "duration": "50 mins",
+      "capacity": 24,
+      "spotsLeft": 6,
+      "room": "Cycle Amphitheater",
+      "intensity": "High"
+    }
+  ],
+  "announcements": [
+    {
+      "id": "ANN-1",
+      "title": "New Cold Plunge & Recovery Zone Grand Opening",
+      "date": "Oct 01, 2026",
+      "content": "We have upgraded our Finnish sauna with a twin contrast cold plunge tub maintained at a therapeutic 45°F. Complimentary for Platinum and VIP members.",
+      "tag": "Facility"
+    },
+    {
+      "id": "ANN-2",
+      "title": "Autumn 6-Week Functional Fitness Challenge",
+      "date": "Oct 10, 2026",
+      "content": "Registration is now open! Measure progress via InBody body composition scan and complete challenges for exclusive Apex apparel.",
+      "tag": "Event"
+    },
+    {
+      "id": "ANN-3",
+      "title": "Studio Holiday Operating Hours Notice",
+      "date": "Nov 20, 2026",
+      "content": "On upcoming holidays, member keycard 24/7 access remains operational for Platinum & VIP. Front desk staffed 8am - 2pm.",
+      "tag": "Holiday"
+    }
+  ],
+  "rules": [
+    "Always scan your digital barcode or key fob upon studio entry.",
+    "Towels are mandatory on the gym floor; sanitize equipment immediately after every set.",
+    "Re-rack all weight plates, dumbbells, and functional equipment to their designated racks.",
+    "Closed-toe athletic shoes required at all times (except during Yoga/Pilates classes in Zenith studio).",
+    "Chalk is permitted on designated Olympic platforms only; wipe bars clean after deadlifting or snatches.",
+    "Guest passes must be registered at the concierge desk prior to gym floor access."
+  ]
+}

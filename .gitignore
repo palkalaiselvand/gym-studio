@@ -1,0 +1,29 @@
+# Dependencies
+node_modules/
+*/node_modules/
+
+# Production Build Artifacts
+dist/
+*/dist/
+
+# Environment Variables & Secrets
+.env
+.env.local
+api/.env
+
+# Document Database dynamic runtime files (seeds in database/seeds/ are tracked)
+database/data/*.db
+database/data/*.db~
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Editor / OS
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db

@@ -1,0 +1,14 @@
+{
+  "name": "gym-studio",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Gym Studio Membership Management SPA, API and Document Database",
+  "scripts": {
+    "start:api": "npm --prefix api start",
+    "dev:api": "npm --prefix api run dev",
+    "dev:ui": "npm --prefix ui run dev",
+    "build:api": "npm --prefix api run build",
+    "build:ui": "npm --prefix ui run build",
+    "build": "npm run build:api && npm run build:ui"
+  }
+}

@@ -1,5 +1,5 @@
 import React from 'react';
-import { Dumbbell, ShieldCheck, User, RotateCcw } from 'lucide-react';
+import { Dumbbell, ShieldCheck, User, RotateCcw, Database } from 'lucide-react';
 import type { UserRole, Member } from '../types';
 
 interface HeaderProps {
@@ -9,6 +9,7 @@ interface HeaderProps {
   selectedMemberId: string;
   onSelectMember: (id: string) => void;
   onResetData: () => void;
+  isApiOnline?: boolean;
 }
 
 export const Header: React.FC<HeaderProps> = ({
@@ -17,7 +18,8 @@ export const Header: React.FC<HeaderProps> = ({
   members,
   selectedMemberId,
   onSelectMember,
-  onResetData
+  onResetData,
+  isApiOnline = false
 }) => {
   return (
     <header className="app-header">
@@ -28,7 +30,27 @@ export const Header: React.FC<HeaderProps> = ({
           </div>
           <div className="brand-title">
             <span>APEX STUDIO</span>
-            <span className="brand-subtitle">Gym & Athletic Club</span>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', marginTop: '2px' }}>
+              <span className="brand-subtitle">Gym & Athletic Club</span>
+              <span
+                style={{
+                  fontSize: '0.65rem',
+                  fontWeight: 700,
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '0.3rem',
+                  padding: '0.1rem 0.5rem',
+                  borderRadius: '9999px',
+                  background: isApiOnline ? 'rgba(16, 185, 129, 0.15)' : 'rgba(245, 158, 11, 0.15)',
+                  color: isApiOnline ? '#34d399' : '#fbbf24',
+                  border: isApiOnline ? '1px solid rgba(16, 185, 129, 0.3)' : '1px solid rgba(245, 158, 11, 0.3)'
+                }}
+                title={isApiOnline ? 'Connected to Open-Source Document DB at http://localhost:5000/api' : 'API offline: using local cache'}
+              >
+                <Database size={10} />
+                <span>{isApiOnline ? 'Live DB' : 'Local Cache'}</span>
+              </span>
+            </div>
           </div>
         </div>
 
