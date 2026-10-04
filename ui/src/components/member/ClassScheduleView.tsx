@@ -11,17 +11,24 @@ import type { StudioClass } from '../../types';
 
 interface ClassScheduleViewProps {
   classes: StudioClass[];
-  onBookClass?: (classId: string, className: string) => void;
-  onCancelClass?: (classId: string, className: string) => void;
+  bookedClassIds: string[];
+  bookingDisabled?: boolean;
+  highIntensityRestricted?: boolean;
+  onBookClass?: (classId: string, className: string) => Promise<boolean>;
+  onCancelClass?: (classId: string, className: string) => Promise<boolean>;
 }
 
 export const ClassScheduleView: React.FC<ClassScheduleViewProps> = ({
   classes,
+  bookedClassIds,
+  bookingDisabled = false,
+  highIntensityRestricted = false,
   onBookClass,
   onCancelClass
 }) => {
   const [selectedCategory, setSelectedCategory] = useState<string>('ALL');
-  const [bookedClassIds, setBookedClassIds] = useState<string[]>([]);
+  const [busyClassIds, setBusyClassIds] = useState<string[]>([]);
+  const [bookingError, setBookingError] = useState('');
 
   const categories = ['ALL', 'HIIT', 'Strength', 'Yoga', 'Boxing', 'Spin'];
 
@@ -30,15 +37,22 @@ export const ClassScheduleView: React.FC<ClassScheduleViewProps> = ({
     return cls.category === selectedCategory;
   });
 
-  const toggleBooking = (cls: StudioClass) => {
+  const toggleBooking = async (cls: StudioClass) => {
     const isBooked = bookedClassIds.includes(cls.id);
-    if (isBooked) {
-      setBookedClassIds((prev) => prev.filter((id) => id !== cls.id));
-      if (onCancelClass) onCancelClass(cls.id, cls.name);
-    } else {
-      if (cls.spotsLeft <= 0) return;
-      setBookedClassIds((prev) => [...prev, cls.id]);
-      if (onBookClass) onBookClass(cls.id, cls.name);
+    if (busyClassIds.includes(cls.id)) return;
+    setBookingError('');
+    setBusyClassIds((current) => [...current, cls.id]);
+    try {
+      if (isBooked) {
+        await onCancelClass?.(cls.id, cls.name);
+      } else {
+        if (cls.spotsLeft <= 0) return;
+        await onBookClass?.(cls.id, cls.name);
+      }
+    } catch (error) {
+      setBookingError(error instanceof Error ? error.message : 'Class booking could not be updated.');
+    } finally {
+      setBusyClassIds((current) => current.filter((id) => id !== cls.id));
     }
   };
 
@@ -57,6 +71,7 @@ export const ClassScheduleView: React.FC<ClassScheduleViewProps> = ({
 
   return (
     <div>
+      {bookingError && <div className="enrollment-error" role="alert">{bookingError}</div>}
       {/* Category Filter Pills */}
       <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '1.5rem', flexWrap: 'wrap' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', color: 'var(--text-muted)', fontSize: '0.85rem', marginRight: '0.5rem' }}>
@@ -85,6 +100,7 @@ export const ClassScheduleView: React.FC<ClassScheduleViewProps> = ({
       <div className="classes-grid">
         {filteredClasses.map((cls) => {
           const isBooked = bookedClassIds.includes(cls.id);
+          const requiresClearance = highIntensityRestricted && ['High', 'Extreme'].includes(cls.intensity);
           const dynamicSpotsLeft = isBooked ? cls.spotsLeft - 1 : cls.spotsLeft;
           const intensityStyle = getIntensityBadge(cls.intensity);
 
@@ -148,13 +164,20 @@ export const ClassScheduleView: React.FC<ClassScheduleViewProps> = ({
                     color: isBooked ? '#34d399' : undefined
                   }}
                   onClick={() => toggleBooking(cls)}
-                  disabled={!isBooked && dynamicSpotsLeft <= 0}
+                  disabled={busyClassIds.includes(cls.id) || (!isBooked && (bookingDisabled || requiresClearance || dynamicSpotsLeft <= 0))}
+                  title={requiresClearance ? 'Physician clearance is recommended before booking high-intensity classes' : undefined}
                 >
-                  {isBooked ? (
+                  {busyClassIds.includes(cls.id) ? (
+                    <span>Saving…</span>
+                  ) : isBooked ? (
                     <>
                       <Check size={14} />
                       <span>Booked</span>
                     </>
+                  ) : bookingDisabled ? (
+                    <span>Activation Required</span>
+                  ) : requiresClearance ? (
+                    <span>Clearance Required</span>
                   ) : dynamicSpotsLeft <= 0 ? (
                     <span>Waitlist Full</span>
                   ) : (

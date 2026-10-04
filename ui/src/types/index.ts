@@ -1,4 +1,21 @@
-export type UserRole = 'admin' | 'member';
+export type UserRole = 'admin' | 'staff' | 'franchise-owner' | 'member';
+
+export interface AuthenticatedUser {
+  id: string;
+  email: string;
+  role: UserRole;
+  memberId: string | null;
+  studioId: string;
+}
+
+export interface StaffAccount {
+  id: string;
+  email: string;
+  role: 'staff' | 'franchise-owner';
+  studioId: string;
+  active: boolean;
+  createdAt: string;
+}
 
 export type MembershipTier = 'Basic' | 'Silver' | 'Gold' | 'Platinum' | 'VIP';
 
@@ -30,6 +47,11 @@ export interface MembershipInfo {
   autoRenew: boolean;
   perks: string[];
   notes?: string;
+  lastOfflinePaymentConfirmation?: {
+    confirmedAt: string;
+    confirmedBy: string;
+    renewalMonths?: number;
+  };
 }
 
 export interface Member {
@@ -44,6 +66,64 @@ export interface Member {
   totalCheckIns: number;
   membership: MembershipInfo;
   recentVisits: VisitHistory[];
+  healthScreening?: {
+    flagged: boolean;
+    physicianClearanceRequired: boolean;
+  };
+  duplicateReview?: {
+    status: 'unverified' | 'review_required' | 'reviewed';
+    candidateMemberIds: string[];
+    reviewedAt?: string;
+    reviewedBy?: string;
+  };
+}
+
+export interface EnrollmentPlan {
+  id: MembershipTier;
+  name: string;
+  monthlyPrice: number;
+  description: string;
+  perks: string[];
+}
+
+export interface EnrollmentWaiver {
+  version: string;
+  text: string;
+  legalReviewRequired: boolean;
+}
+
+export interface EnrollmentSubmission {
+  name: string;
+  email: string;
+  phone: string;
+  planId: MembershipTier;
+  startDate: string;
+  dateOfBirth: string;
+  channel: 'WEB';
+  parqResponses: {
+    heartCondition: boolean;
+    chestPain: boolean;
+    medicalAdvice: boolean;
+    boneOrJointCondition: boolean;
+  };
+  waiverAccepted: boolean;
+  contractAccepted: boolean;
+  signerName: string;
+  password: string;
+  guardianName?: string;
+  guardianSignature?: string;
+}
+
+export interface EnrollmentResult {
+  enrollmentId: string;
+  memberId: string;
+  status: 'PENDING_PAYMENT';
+  member: Member;
+  paymentStatus: 'NOT_CONFIGURED';
+  walletPassStatus: 'NOT_PROVISIONED';
+  identityReviewRequired: boolean;
+  csrfToken: string;
+  user: AuthenticatedUser;
 }
 
 export interface StudioAmenity {

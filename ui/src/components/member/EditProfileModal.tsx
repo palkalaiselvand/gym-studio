@@ -77,8 +77,9 @@ export const EditProfileModal: React.FC<EditProfileModalProps> = ({
                 className="form-input"
                 required
                 value={email}
-                onChange={(e) => setEmail(e.target.value)}
+                readOnly
               />
+              <span className="enrollment-muted">Sign-in email changes are not available here. Contact studio staff for account help.</span>
             </div>
 
             <div className="form-group">

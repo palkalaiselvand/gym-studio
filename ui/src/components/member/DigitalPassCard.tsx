@@ -1,24 +1,54 @@
-import React, { useState } from 'react';
-import { Dumbbell, Wifi, QrCode, CheckCircle2 } from 'lucide-react';
+import React, { useEffect, useState } from 'react';
+import { Dumbbell, LoaderCircle, QrCode, Wifi } from 'lucide-react';
+import QRCode from 'qrcode';
 import type { Member } from '../../types';
 import { TIER_CONFIG } from '../../data/mockData';
+import { apiService } from '../../services/apiService';
+import { hasStudioAccess } from '../../utils/membership';
 
 interface DigitalPassCardProps {
   member: Member;
-  onCheckInSimulation?: () => void;
 }
 
-export const DigitalPassCard: React.FC<DigitalPassCardProps> = ({ member, onCheckInSimulation }) => {
-  const [justScanned, setJustScanned] = useState(false);
+export const DigitalPassCard: React.FC<DigitalPassCardProps> = ({ member }) => {
+  const [qrCode, setQrCode] = useState('');
+  const [expiresAt, setExpiresAt] = useState('');
+  const [error, setError] = useState('');
   const tierConfig = TIER_CONFIG[member.membership.tier] || TIER_CONFIG.Gold;
+  const canAccess = hasStudioAccess(member);
 
-  const handleSimulateScan = () => {
-    setJustScanned(true);
-    if (onCheckInSimulation) onCheckInSimulation();
-    setTimeout(() => {
-      setJustScanned(false);
-    }, 2500);
-  };
+  useEffect(() => {
+    if (!canAccess) return;
+
+    let cancelled = false;
+    const issuePass = async () => {
+      try {
+        const pass = await apiService.getAccessPass();
+        const image = await QRCode.toDataURL(pass.token, {
+          errorCorrectionLevel: 'M',
+          margin: 2,
+          width: 184
+        });
+        if (!cancelled) {
+          setQrCode(image);
+          setExpiresAt(pass.expiresAt);
+          setError('');
+        }
+      } catch (passError) {
+        if (!cancelled) {
+          setQrCode('');
+          setError(passError instanceof Error ? passError.message : 'The access pass could not be issued.');
+        }
+      }
+    };
+
+    void issuePass();
+    const refreshTimer = window.setInterval(() => { void issuePass(); }, 20_000);
+    return () => {
+      cancelled = true;
+      window.clearInterval(refreshTimer);
+    };
+  }, [canAccess, member.id]);
 
   return (
     <div className="digital-pass-wrapper">
@@ -29,38 +59,19 @@ export const DigitalPassCard: React.FC<DigitalPassCardProps> = ({ member, onChec
           boxShadow: `0 20px 40px -10px rgba(0, 0, 0, 0.6), 0 0 25px ${tierConfig.badgeColor}40`
         }}
       >
-        {/* Pass Top */}
         <div className="pass-header">
           <div className="pass-studio-name">
             <Dumbbell size={20} strokeWidth={2.5} />
             <span>APEX ATHLETIC</span>
           </div>
-
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-            <span
-              style={{
-                fontSize: '0.7rem',
-                fontWeight: 800,
-                textTransform: 'uppercase',
-                background: 'rgba(255, 255, 255, 0.25)',
-                padding: '0.2rem 0.6rem',
-                borderRadius: '9999px',
-                letterSpacing: '0.08em'
-              }}
-            >
-              {member.membership.tier} PASS
-            </span>
+            <span className="pass-tier-label">{member.membership.tier} PASS</span>
             <Wifi size={18} style={{ opacity: 0.8 }} />
           </div>
         </div>
 
-        {/* Pass Body */}
         <div className="pass-body">
-          <img
-            src={member.avatar}
-            alt={member.name}
-            className="pass-avatar"
-          />
+          <img src={member.avatar} alt="" className="pass-avatar" />
           <div style={{ flex: 1 }}>
             <div className="pass-member-name">{member.name}</div>
             <div className="pass-member-id">MEMBER #{member.id}</div>
@@ -70,82 +81,36 @@ export const DigitalPassCard: React.FC<DigitalPassCardProps> = ({ member, onChec
           </div>
         </div>
 
-        {/* Barcode & Status Footer */}
         <div className="pass-footer">
-          <div>
-            <div style={{ fontSize: '0.65rem', textTransform: 'uppercase', letterSpacing: '0.05em', opacity: 0.75, marginBottom: '4px' }}>
-              Access Code
-            </div>
-            {/* Visual Barcode bars */}
-            <div className="barcode-strip">
-              <div className="barcode-bar" style={{ width: '3px' }} />
-              <div className="barcode-bar" style={{ width: '1px' }} />
-              <div className="barcode-bar" style={{ width: '4px' }} />
-              <div className="barcode-bar" style={{ width: '2px' }} />
-              <div className="barcode-bar" style={{ width: '1px' }} />
-              <div className="barcode-bar" style={{ width: '3px' }} />
-              <div className="barcode-bar" style={{ width: '5px' }} />
-              <div className="barcode-bar" style={{ width: '2px' }} />
-              <div className="barcode-bar" style={{ width: '3px' }} />
-              <div className="barcode-bar" style={{ width: '1px' }} />
-              <div className="barcode-bar" style={{ width: '4px' }} />
-              <div className="barcode-bar" style={{ width: '2px' }} />
-              <div className="barcode-bar" style={{ width: '6px' }} />
-              <div className="barcode-bar" style={{ width: '2px' }} />
-            </div>
+          <div className="pass-qr-area" aria-live="polite">
+            {canAccess && qrCode ? (
+              <img src={qrCode} alt="Short-lived studio access QR code" className="pass-qr-code" />
+            ) : canAccess && !error ? (
+              <LoaderCircle size={26} className="enrollment-spinner" aria-label="Preparing access QR code" />
+            ) : (
+              <QrCode size={28} />
+            )}
+            <span>{canAccess && qrCode ? `Refreshes at ${new Date(expiresAt).toLocaleTimeString()}` : 'Access QR'}</span>
           </div>
-
           <div style={{ textAlign: 'right' }}>
             <div style={{ fontSize: '0.65rem', textTransform: 'uppercase', opacity: 0.8 }}>Access Status</div>
-            <div
-              style={{
-                fontSize: '0.85rem',
-                fontWeight: 700,
-                textTransform: 'uppercase',
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: '0.3rem',
-                marginTop: '2px'
-              }}
-            >
-              <span
-                style={{
-                  width: '8px',
-                  height: '8px',
-                  borderRadius: '50%',
-                  background: member.membership.status === 'active' ? '#4ade80' : '#f87171'
-                }}
-              />
+            <div className="pass-access-status">
+              <span className={`pass-status-dot ${canAccess ? 'active' : ''}`} />
               {member.membership.status}
             </div>
           </div>
         </div>
       </div>
 
-      {/* Interactive Scan Simulator Button */}
-      <div style={{ marginTop: '0.75rem', textAlign: 'center' }}>
-        <button
-          className="btn-secondary-sm"
-          style={{
-            margin: '0 auto',
-            borderColor: justScanned ? 'var(--accent-primary)' : 'var(--border-light)',
-            color: justScanned ? 'var(--accent-primary)' : 'var(--text-secondary)'
-          }}
-          onClick={handleSimulateScan}
-        >
-          {justScanned ? (
-            <>
-              <CheckCircle2 size={14} color="var(--accent-primary)" />
-              <span>Gate Verified: Access Granted!</span>
-            </>
-          ) : (
-            <>
-              <QrCode size={14} />
-              <span>Simulate NFC / Turnstile Check-In</span>
-            </>
-          )}
-        </button>
-      </div>
+      {!canAccess && (
+        <p className="enrollment-pass-pending" role="status">
+          Access is unavailable until the membership is active and paid.
+        </p>
+      )}
+      {error && <p className="enrollment-pass-pending" role="alert">{error}</p>}
+      {canAccess && qrCode && (
+        <p className="enrollment-pass-pending">Present this rotating QR code to a studio staff access reader.</p>
+      )}
     </div>
   );
 };

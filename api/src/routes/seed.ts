@@ -1,10 +1,11 @@
 import { Router, Request, Response } from 'express';
 import { resetDb } from '../db.js';
+import { requireAuth, requireRoles } from '../auth.js';
 
 const router = Router();
 
 // POST /api/seed/reset - Reset database back to default seed data
-router.post('/reset', async (_req: Request, res: Response) => {
+router.post('/reset', requireAuth, requireRoles('admin'), async (_req: Request, res: Response) => {
   try {
     await resetDb();
     res.json({

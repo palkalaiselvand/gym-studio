@@ -1,6 +1,7 @@
 import { Router, Request, Response } from 'express';
 import { studioDb } from '../db.js';
 import type { StudioDetails } from '../types.js';
+import { requireAuth, requireRoles } from '../auth.js';
 
 const router = Router();
 
@@ -20,7 +21,7 @@ router.get('/', async (_req: Request, res: Response) => {
 });
 
 // PUT /api/studio - Update studio information
-router.put('/', async (req: Request, res: Response) => {
+router.put('/', requireAuth, requireRoles('admin'), async (req: Request, res: Response) => {
   try {
     const updates: Partial<StudioDetails> = req.body;
     const current = await studioDb.findOneAsync({});

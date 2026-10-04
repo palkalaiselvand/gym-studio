@@ -6,27 +6,45 @@ import {
   Trash2,
   Check,
   AlertTriangle,
-  RefreshCw
+  RefreshCw,
+  Users
 } from 'lucide-react';
 import type { Member, MembershipStatus } from '../../types';
 import { StatsOverview } from './StatsOverview';
 import { MemberModal } from './MemberModal';
 import { MemberDeleteModal } from './MemberDeleteModal';
+import { TeamAccessPanel } from './TeamAccessPanel';
 
 interface AdminDashboardProps {
   members: Member[];
-  onAddMember: (memberData: Partial<Member>) => void;
-  onUpdateMember: (id: string, memberData: Partial<Member>) => void;
+  canManageMembers: boolean;
+  canDeleteMembers: boolean;
+  canRenewMemberships: boolean;
+  canActivateMembers: boolean;
+  canManageTeam: boolean;
+  onStartEnrollment: () => void;
+  onUpdateMember: (id: string, memberData: Partial<Member>) => Promise<void>;
   onDeleteMember: (id: string) => void;
   onQuickRenew: (member: Member) => void;
+  onActivateMember: (member: Member) => void;
+  onReviewIdentity: (member: Member) => void;
+  onToast: (title: string, message: string, type: 'success' | 'error') => void;
 }
 
 export const AdminDashboard: React.FC<AdminDashboardProps> = ({
   members,
-  onAddMember,
+  canManageMembers,
+  canDeleteMembers,
+  canRenewMemberships,
+  canActivateMembers,
+  canManageTeam,
+  onStartEnrollment,
   onUpdateMember,
   onDeleteMember,
-  onQuickRenew
+  onQuickRenew,
+  onActivateMember,
+  onReviewIdentity,
+  onToast
 }) => {
   // Search & Filter state
   const [searchTerm, setSearchTerm] = useState('');
@@ -40,6 +58,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
 
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [memberToDelete, setMemberToDelete] = useState<Member | null>(null);
+  const [isTeamAccessOpen, setIsTeamAccessOpen] = useState(false);
 
   // Filtered members calculation
   const filteredMembers = useMemo(() => {
@@ -85,11 +104,6 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
     });
   }, [members, searchTerm, tierFilter, statusFilter, paymentFilter]);
 
-  const handleOpenAdd = () => {
-    setEditingMember(null);
-    setIsModalOpen(true);
-  };
-
   const handleOpenEdit = (member: Member) => {
     setEditingMember(member);
     setIsModalOpen(true);
@@ -100,11 +114,27 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
     setIsDeleteModalOpen(true);
   };
 
-  const handleSaveModal = (data: Partial<Member>) => {
-    if (editingMember) {
-      onUpdateMember(editingMember.id, data);
-    } else {
-      onAddMember(data);
+  const handleActivateMember = (member: Member) => {
+    const confirmed = window.confirm(
+      `Confirm that offline payment was collected outside this application for ${member.name}. This records confirmation and activates access; it does not process or collect a payment.`
+    );
+    if (confirmed) onActivateMember(member);
+  };
+
+  const handleQuickRenew = (member: Member) => {
+    const confirmed = window.confirm(
+      `Confirm that payment for a 1-month renewal was collected outside this application for ${member.name}. This does not process or collect a payment.`
+    );
+    if (confirmed) onQuickRenew(member);
+  };
+
+  const handleSaveModal = async (data: Partial<Member>) => {
+    if (!editingMember) return;
+    try {
+      await onUpdateMember(editingMember.id, data);
+      setIsModalOpen(false);
+    } catch (error) {
+      onToast('Member could not be saved', error instanceof Error ? error.message : 'Please try again.', 'error');
     }
   };
 
@@ -141,11 +171,20 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
           </p>
         </div>
 
-        <button className="btn-primary" onClick={handleOpenAdd}>
-          <UserPlus size={18} />
-          <span>Register New Member</span>
-        </button>
+        {canManageMembers && (
+          <button className="btn-primary" onClick={onStartEnrollment}>
+            <UserPlus size={18} />
+            <span>Enroll New Member</span>
+          </button>
+        )}
+        {canManageTeam && (
+          <button className="btn-secondary" onClick={() => setIsTeamAccessOpen((open) => !open)}>
+            <Users size={16} /><span>{isTeamAccessOpen ? 'Hide team access' : 'Manage team access'}</span>
+          </button>
+        )}
       </div>
+
+      {isTeamAccessOpen && canManageTeam && <TeamAccessPanel onBack={() => setIsTeamAccessOpen(false)} />}
 
       {/* Metrics Row */}
       <StatsOverview members={members} />
@@ -249,6 +288,9 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
             <tbody>
               {filteredMembers.map((member) => {
                 const daysInfo = getDaysRemaining(member.membership.endDate, member.membership.status);
+                const possibleMatches = (member.duplicateReview?.candidateMemberIds || [])
+                  .map((candidateId) => members.find((candidate) => candidate.id === candidateId))
+                  .filter((candidate): candidate is Member => !!candidate);
 
                 return (
                   <tr key={member.id}>
@@ -265,6 +307,16 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                           <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', display: 'block' }}>
                             {member.phone} • <span style={{ fontFamily: 'var(--font-mono)' }}>{member.id}</span>
                           </span>
+                          {member.duplicateReview?.status === 'review_required' && (
+                            <div style={{ marginTop: '0.35rem' }}>
+                              <span style={{ display: 'block', fontSize: '0.75rem', color: 'var(--text-muted)' }}>
+                                Possible match: {possibleMatches.map((candidate) => `${candidate.name} (${candidate.id})`).join(', ') || 'record unavailable'}
+                              </span>
+                              <button className="btn-secondary-sm" onClick={() => onReviewIdentity(member)}>
+                                Mark duplicate review complete
+                              </button>
+                            </div>
+                          )}
                         </div>
                       </div>
                     </td>
@@ -329,27 +381,37 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
 
                     <td>
                       <div className="table-actions" style={{ justifyContent: 'flex-end' }}>
-                        <button
+                        {canManageMembers && <button
                           className="btn-icon"
-                          title="Quick Renew (+1 Month)"
-                          onClick={() => onQuickRenew(member)}
+                          title="Record offline payment and renew (+1 month)"
+                          onClick={() => handleQuickRenew(member)}
+                          disabled={!canRenewMemberships}
                         >
                           <RefreshCw size={15} />
-                        </button>
-                        <button
+                        </button>}
+                        {canActivateMembers && member.membership.status === 'pending' && (
+                          <button
+                            className="btn-icon"
+                            title="Record offline payment and activate"
+                            onClick={() => handleActivateMember(member)}
+                          >
+                            <Check size={15} />
+                          </button>
+                        )}
+                        {canManageMembers && <button
                           className="btn-icon"
                           title="Edit Membership Details"
                           onClick={() => handleOpenEdit(member)}
                         >
                           <Edit2 size={15} />
-                        </button>
-                        <button
+                        </button>}
+                        {canDeleteMembers && <button
                           className="btn-icon danger"
                           title="Cancel / Delete Member"
                           onClick={() => handleOpenDelete(member)}
                         >
                           <Trash2 size={15} />
-                        </button>
+                        </button>}
                       </div>
                     </td>
                   </tr>

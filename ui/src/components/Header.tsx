@@ -1,30 +1,28 @@
 import React from 'react';
-import { Dumbbell, ShieldCheck, User, RotateCcw, Database } from 'lucide-react';
-import type { UserRole, Member } from '../types';
+import { Dumbbell, LogOut, RotateCcw, Database, UserPlus } from 'lucide-react';
+import type { AuthenticatedUser } from '../types';
 
 interface HeaderProps {
-  currentRole: UserRole;
-  onRoleChange: (role: UserRole) => void;
-  members: Member[];
-  selectedMemberId: string;
-  onSelectMember: (id: string) => void;
+  user: AuthenticatedUser | null;
+  onLogout: () => void;
   onResetData: () => void;
   isApiOnline?: boolean;
+  onStartEnrollment: () => void;
+  enrollmentOpen: boolean;
 }
 
 export const Header: React.FC<HeaderProps> = ({
-  currentRole,
-  onRoleChange,
-  members,
-  selectedMemberId,
-  onSelectMember,
+  user,
+  onLogout,
   onResetData,
-  isApiOnline = false
+  isApiOnline = false,
+  onStartEnrollment,
+  enrollmentOpen
 }) => {
   return (
     <header className="app-header">
       <div className="header-inner">
-        <div className="brand-wrapper" onClick={() => onRoleChange('admin')}>
+        <div className="brand-wrapper">
           <div className="brand-logo-icon">
             <Dumbbell size={24} strokeWidth={2.5} />
           </div>
@@ -45,63 +43,40 @@ export const Header: React.FC<HeaderProps> = ({
                   color: isApiOnline ? '#34d399' : '#fbbf24',
                   border: isApiOnline ? '1px solid rgba(16, 185, 129, 0.3)' : '1px solid rgba(245, 158, 11, 0.3)'
                 }}
-                title={isApiOnline ? 'Connected to Open-Source Document DB at http://localhost:5000/api' : 'API offline: using local cache'}
+                title={isApiOnline ? 'Connected to the live Gym Studio API' : 'Gym Studio API is offline'}
               >
                 <Database size={10} />
-                <span>{isApiOnline ? 'Live DB' : 'Local Cache'}</span>
+                <span>{isApiOnline ? 'Live DB' : 'API Offline'}</span>
               </span>
             </div>
           </div>
         </div>
 
         <div className="header-actions">
-          {/* Member selector when in Member role */}
-          {currentRole === 'member' && (
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-              <span style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>Viewing as:</span>
-              <select
-                className="member-select-dropdown"
-                value={selectedMemberId}
-                onChange={(e) => onSelectMember(e.target.value)}
-              >
-                {members.map((m) => (
-                  <option key={m.id} value={m.id}>
-                    {m.name} ({m.membership.tier})
-                  </option>
-                ))}
-              </select>
-            </div>
+          {!user && !enrollmentOpen && (
+            <button className="btn-primary" onClick={onStartEnrollment}>
+              <UserPlus size={16} />
+              <span>Join the studio</span>
+            </button>
           )}
-
-          {/* Role Toggle Switcher */}
-          <div className="role-switcher-pill">
-            <button
-              className={`role-pill-btn ${currentRole === 'admin' ? 'active' : ''}`}
-              onClick={() => onRoleChange('admin')}
-              title="Admin mode: Manage gym memberships, payments and members"
-            >
-              <ShieldCheck size={16} />
-              <span>Admin Management</span>
-            </button>
-            <button
-              className={`role-pill-btn ${currentRole === 'member' ? 'active' : ''}`}
-              onClick={() => onRoleChange('member')}
-              title="Member mode: View your pass, attendance and studio details"
-            >
-              <User size={16} />
-              <span>Member Portal</span>
-            </button>
-          </div>
-
-          {/* Reset Demo Data Button */}
-          <button
-            className="btn-secondary-sm"
-            onClick={onResetData}
-            title="Reset data back to initial stub members & studio information"
-          >
-            <RotateCcw size={14} />
-            <span>Reset Demo Data</span>
-          </button>
+          {user && (
+            <>
+              <span className="header-user-label">{user.email} · {user.role}</span>
+              {!enrollmentOpen && (user.role === 'admin' || user.role === 'staff') && (
+                <button className="btn-primary" onClick={onStartEnrollment}>
+                  <UserPlus size={16} /><span>Enroll member</span>
+                </button>
+              )}
+              {user.role === 'admin' && (
+                <button className="btn-secondary-sm" onClick={onResetData} title="Reset demo database">
+                  <RotateCcw size={14} /><span>Reset Demo Data</span>
+                </button>
+              )}
+              <button className="btn-secondary-sm" onClick={onLogout}>
+                <LogOut size={14} /><span>Sign out</span>
+              </button>
+            </>
+          )}
         </div>
       </div>
     </header>

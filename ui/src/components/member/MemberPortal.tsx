@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import {
   User,
   Calendar,
@@ -21,11 +21,13 @@ import { StudioDetailsView } from './StudioDetailsView';
 import { ClassScheduleView } from './ClassScheduleView';
 import { EditProfileModal } from './EditProfileModal';
 import { TIER_CONFIG } from '../../data/mockData';
+import { apiService } from '../../services/apiService';
+import { hasStudioAccess } from '../../utils/membership';
 
 interface MemberPortalProps {
   member: Member;
   studio: StudioDetails;
-  onUpdateMember: (id: string, updates: Partial<Member>) => void;
+  onUpdateMember: (id: string, updates: Partial<Member>) => Promise<void>;
   onToast: (title: string, message: string, type: 'success' | 'info' | 'warning' | 'error') => void;
 }
 
@@ -37,47 +39,58 @@ export const MemberPortal: React.FC<MemberPortalProps> = ({
 }) => {
   const [activeTab, setActiveTab] = useState<'profile' | 'studio' | 'classes' | 'rules'>('profile');
   const [isEditProfileOpen, setIsEditProfileOpen] = useState(false);
+  const [bookedClassIds, setBookedClassIds] = useState<string[]>([]);
+  const onToastRef = useRef(onToast);
 
   const tierInfo = TIER_CONFIG[member.membership.tier] || TIER_CONFIG.Gold;
+  const membershipAllowsAccess = hasStudioAccess(member);
 
-  // Handle member scan simulation
-  const handleCheckInSimulation = () => {
-    const today = new Date().toISOString().split('T')[0];
-    const newVisit = {
-      id: `v-${Date.now()}`,
-      date: today,
-      time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-      activity: 'Studio Check-In (Turnstile Pass Scanned)'
-    };
+  useEffect(() => {
+    onToastRef.current = onToast;
+  }, [onToast]);
 
-    const updatedVisits = [newVisit, ...member.recentVisits];
-    const updatedStreak = member.attendanceStreak + 1;
-    const updatedCheckIns = member.totalCheckIns + 1;
-
-    onUpdateMember(member.id, {
-      attendanceStreak: updatedStreak,
-      totalCheckIns: updatedCheckIns,
-      recentVisits: updatedVisits
-    });
-
-    onToast('Check-In Verified!', `Welcome to Apex Studio, ${member.name}! Streak is now ${updatedStreak} days.`, 'success');
-  };
+  useEffect(() => {
+    let cancelled = false;
+    apiService.getClassBookings()
+      .then((ids) => { if (!cancelled) setBookedClassIds(ids); })
+      .catch((error: unknown) => {
+        if (!cancelled) onToastRef.current('Class bookings unavailable', error instanceof Error ? error.message : 'Could not load reservations.', 'error');
+      });
+    return () => { cancelled = true; };
+  }, [member.id]);
 
   const handleProfileSave = (updates: {
     email: string;
     phone: string;
     emergencyContact: { name: string; phone: string; relation: string };
   }) => {
-    onUpdateMember(member.id, updates);
-    onToast('Profile Updated', 'Your contact and emergency information have been saved.', 'success');
+    void onUpdateMember(member.id, { phone: updates.phone, emergencyContact: updates.emergencyContact })
+      .then(() => onToast('Profile Updated', 'Your contact and emergency information have been saved.', 'success'))
+      .catch((error: unknown) => onToast('Profile update failed', error instanceof Error ? error.message : 'Your changes could not be saved.', 'error'));
   };
 
-  const handleBookClass = (_classId: string, className: string) => {
-    onToast('Class Booked!', `You have reserved a spot for "${className}". See you on the floor!`, 'success');
+  const handleBookClass = async (classId: string, className: string): Promise<boolean> => {
+    try {
+      await apiService.bookClass(classId);
+      setBookedClassIds((current) => current.includes(classId) ? current : [...current, classId]);
+      onToast('Class Booked!', `You have reserved a spot for "${className}". See you on the floor!`, 'success');
+      return true;
+    } catch (error) {
+      onToast('Class booking failed', error instanceof Error ? error.message : 'The class could not be booked.', 'error');
+      return false;
+    }
   };
 
-  const handleCancelClass = (_classId: string, className: string) => {
-    onToast('Booking Cancelled', `Your reservation for "${className}" has been cancelled.`, 'info');
+  const handleCancelClass = async (classId: string, className: string): Promise<boolean> => {
+    try {
+      await apiService.cancelClass(classId);
+      setBookedClassIds((current) => current.filter((id) => id !== classId));
+      onToast('Booking Cancelled', `Your reservation for "${className}" has been cancelled.`, 'info');
+      return true;
+    } catch (error) {
+      onToast('Cancellation failed', error instanceof Error ? error.message : 'The reservation could not be cancelled.', 'error');
+      return false;
+    }
   };
 
   return (
@@ -86,7 +99,6 @@ export const MemberPortal: React.FC<MemberPortalProps> = ({
       <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', marginBottom: '2rem' }}>
         <DigitalPassCard
           member={member}
-          onCheckInSimulation={handleCheckInSimulation}
         />
       </div>
 
@@ -386,8 +398,23 @@ export const MemberPortal: React.FC<MemberPortalProps> = ({
               Reserve your spot in high-performance conditioning, barbell power, and recovery flows.
             </p>
           </div>
+          {!membershipAllowsAccess && (
+            <div className="enrollment-notice enrollment-notice-warning" role="status">
+              <Shield size={19} />
+              <p>Class booking is unavailable until your membership is activated after payment setup.</p>
+            </div>
+          )}
+          {member.healthScreening?.physicianClearanceRequired && (
+            <div className="enrollment-notice enrollment-notice-warning" role="status">
+              <Shield size={19} />
+              <p>Your screening recommends physician clearance before high-intensity classes. Please contact the studio before booking those classes.</p>
+            </div>
+          )}
           <ClassScheduleView
             classes={studio.classes}
+            bookedClassIds={bookedClassIds}
+            bookingDisabled={!membershipAllowsAccess}
+            highIntensityRestricted={member.healthScreening?.physicianClearanceRequired ?? false}
             onBookClass={handleBookClass}
             onCancelClass={handleCancelClass}
           />

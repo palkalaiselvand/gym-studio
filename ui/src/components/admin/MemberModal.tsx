@@ -23,11 +23,11 @@ export const MemberModal: React.FC<MemberModalProps> = ({
   const [email, setEmail] = useState('');
   const [phone, setPhone] = useState('');
   const [tier, setTier] = useState<MembershipTier>('Gold');
-  const [status, setStatus] = useState<MembershipStatus>('active');
-  const [paymentStatus, setPaymentStatus] = useState<PaymentStatus>('paid');
+  const [status, setStatus] = useState<MembershipStatus>('pending');
+  const [paymentStatus, setPaymentStatus] = useState<PaymentStatus>('pending');
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
-  const [autoRenew, setAutoRenew] = useState(true);
+  const [autoRenew, setAutoRenew] = useState(false);
   const [emergencyName, setEmergencyName] = useState('');
   const [emergencyPhone, setEmergencyPhone] = useState('');
   const [emergencyRelation, setEmergencyRelation] = useState('');
@@ -44,7 +44,7 @@ export const MemberModal: React.FC<MemberModalProps> = ({
       setPaymentStatus(memberToEdit.membership.paymentStatus);
       setStartDate(memberToEdit.membership.startDate);
       setEndDate(memberToEdit.membership.endDate);
-      setAutoRenew(memberToEdit.membership.autoRenew);
+      setAutoRenew(false);
       setEmergencyName(memberToEdit.emergencyContact?.name || '');
       setEmergencyPhone(memberToEdit.emergencyContact?.phone || '');
       setEmergencyRelation(memberToEdit.emergencyContact?.relation || '');
@@ -55,14 +55,14 @@ export const MemberModal: React.FC<MemberModalProps> = ({
       setEmail('');
       setPhone('');
       setTier('Gold');
-      setStatus('active');
-      setPaymentStatus('paid');
+      setStatus('pending');
+      setPaymentStatus('pending');
       const today = new Date().toISOString().split('T')[0];
       setStartDate(today);
       const oneYear = new Date();
       oneYear.setFullYear(oneYear.getFullYear() + 1);
       setEndDate(oneYear.toISOString().split('T')[0]);
-      setAutoRenew(true);
+      setAutoRenew(false);
       setEmergencyName('');
       setEmergencyPhone('');
       setEmergencyRelation('');
@@ -173,6 +173,7 @@ export const MemberModal: React.FC<MemberModalProps> = ({
                   placeholder="e.g. jordan.m@example.com"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
+                  disabled={isEditing}
                 />
                 {errors.email && <span style={{ color: '#fb7185', fontSize: '0.75rem' }}>{errors.email}</span>}
               </div>
@@ -241,7 +242,16 @@ export const MemberModal: React.FC<MemberModalProps> = ({
                   value={status}
                   onChange={(e) => setStatus(e.target.value as MembershipStatus)}
                 >
-                  <option value="active">Active</option>
+                  <option
+                    value="active"
+                    disabled={
+                      memberToEdit
+                        ? memberToEdit.membership.status !== 'active' || memberToEdit.membership.paymentStatus !== 'paid'
+                        : true
+                    }
+                  >
+                    Active
+                  </option>
                   <option value="pending">Pending Approval</option>
                   <option value="expired">Expired</option>
                   <option value="suspended">Suspended (Pause)</option>
@@ -256,12 +266,15 @@ export const MemberModal: React.FC<MemberModalProps> = ({
                   value={paymentStatus}
                   onChange={(e) => setPaymentStatus(e.target.value as PaymentStatus)}
                 >
-                  <option value="paid">Paid</option>
+                  <option value="paid" disabled={!memberToEdit || memberToEdit.membership.paymentStatus !== 'paid'}>Paid</option>
                   <option value="pending">Pending Invoice</option>
                   <option value="overdue">Overdue</option>
                 </select>
               </div>
             </div>
+            <p className="enrollment-muted">
+              Payment is handled outside this app. Use the directory's offline payment confirmation action to activate or renew access.
+            </p>
 
             <div className="form-row">
               <div className="form-group">
@@ -323,10 +336,11 @@ export const MemberModal: React.FC<MemberModalProps> = ({
                 <input
                   type="checkbox"
                   checked={autoRenew}
+                  disabled
                   onChange={(e) => setAutoRenew(e.target.checked)}
                   style={{ accentColor: 'var(--accent-primary)', width: '16px', height: '16px' }}
                 />
-                <span>Enable automatic subscription renewal on expiration date</span>
+                <span>Automatic renewal requires payment integration</span>
               </label>
             </div>
 

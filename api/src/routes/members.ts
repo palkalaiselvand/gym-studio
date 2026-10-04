@@ -1,11 +1,39 @@
 import { Router, Request, Response } from 'express';
-import { membersDb } from '../db.js';
+import { recordCheckIn } from '../attendance.js';
+import { addMembershipMonths, hasStudioAccess } from '../membership.js';
+import { classBookingsDb, classesDb, enrollmentsDb, membersDb, sessionsDb, usersDb } from '../db.js';
 import type { Member, MembershipTier, MembershipStatus, PaymentStatus } from '../types.js';
+import { canAccessMember, requireAuth, requireRoles } from '../auth.js';
 
 const router = Router();
 
+async function updateEnrollmentPayment(
+  memberId: string,
+  actorId: string,
+  confirmedAt: string,
+  status: 'ACTIVE' | 'RENEWED',
+  renewalMonths?: number
+): Promise<void> {
+  const enrollment = await enrollmentsDb.findOneAsync({ memberId });
+  if (!enrollment) return;
+  await enrollmentsDb.updateAsync(
+    { id: enrollment.id },
+    {
+      ...enrollment,
+      status,
+      payment: {
+        status: 'OFFLINE_CONFIRMED',
+        confirmedAt,
+        confirmedBy: actorId,
+        ...(renewalMonths ? { renewalMonths } : {})
+      }
+    },
+    {}
+  );
+}
+
 // GET /api/members - List members with optional query filtering
-router.get('/', async (req: Request, res: Response) => {
+router.get('/', requireAuth, requireRoles('admin', 'staff', 'franchise-owner'), async (req: Request, res: Response) => {
   try {
     const { search, tier, status, payment } = req.query;
 
@@ -48,9 +76,12 @@ router.get('/', async (req: Request, res: Response) => {
 });
 
 // GET /api/members/:id - Get single member
-router.get('/:id', async (req: Request, res: Response) => {
+router.get('/:id', requireAuth, async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
+    if (!canAccessMember(req, id)) {
+      return res.status(403).json({ success: false, error: 'You are not authorized to view this member' });
+    }
     const member = await membersDb.findOneAsync({ id });
 
     if (!member) {
@@ -63,72 +94,50 @@ router.get('/:id', async (req: Request, res: Response) => {
   }
 });
 
-// POST /api/members - Register new member
-router.post('/', async (req: Request, res: Response) => {
+router.patch('/:id/duplicate-review', requireAuth, requireRoles('admin', 'staff'), async (req: Request, res: Response) => {
   try {
-    const body = req.body;
-
-    if (!body.name || !body.email) {
-      return res.status(400).json({ success: false, error: 'Name and email are required' });
+    const { id } = req.params;
+    const current = await membersDb.findOneAsync({ id });
+    if (!current) {
+      return res.status(404).json({ success: false, error: `Member ${id} not found` });
     }
-
-    // Check for duplicate email
-    const existing = await membersDb.findOneAsync({ email: body.email });
-    if (existing) {
-      return res.status(409).json({ success: false, error: `Email ${body.email} is already registered` });
+    const status = req.body?.status;
+    if (status !== 'reviewed' && status !== 'review_required') {
+      return res.status(400).json({ success: false, error: 'Duplicate review status must be reviewed or review_required' });
     }
-
-    const id = body.id || `MEM-${Math.floor(1000 + Math.random() * 9000)}`;
-
-    const newMember: Member = {
-      id,
-      name: body.name,
-      email: body.email,
-      phone: body.phone || '',
-      avatar:
-        body.avatar ||
-        `https://images.unsplash.com/photo-${1534528741775 + Math.floor(Math.random() * 1000)}?auto=format&fit=crop&w=200&q=80`,
-      joinDate: body.joinDate || new Date().toISOString().split('T')[0],
-      attendanceStreak: body.attendanceStreak || 0,
-      totalCheckIns: body.totalCheckIns || 0,
-      emergencyContact: {
-        name: body.emergencyContact?.name || '',
-        phone: body.emergencyContact?.phone || '',
-        relation: body.emergencyContact?.relation || 'Emergency Contact'
-      },
-      membership: {
-        id: body.membership?.id || `MS-${Date.now().toString().slice(-6)}`,
-        tier: body.membership?.tier || 'Gold',
-        status: body.membership?.status || 'active',
-        startDate: body.membership?.startDate || new Date().toISOString().split('T')[0],
-        endDate: body.membership?.endDate || new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
-        pricePerMonth: body.membership?.pricePerMonth || 89,
-        paymentStatus: body.membership?.paymentStatus || 'paid',
-        autoRenew: body.membership?.autoRenew !== undefined ? body.membership.autoRenew : true,
-        perks: body.membership?.perks || [],
-        notes: body.membership?.notes || ''
-      },
-      recentVisits: body.recentVisits || [
-        {
-          id: `v-${Date.now()}`,
-          date: new Date().toISOString().split('T')[0],
-          time: '10:00 AM',
-          activity: 'Welcome Orientation & Assessment'
-        }
-      ]
+    const updated = {
+      ...current,
+      duplicateReview: {
+        status,
+        candidateMemberIds: current.duplicateReview?.candidateMemberIds || [],
+        reviewedAt: new Date().toISOString(),
+        reviewedBy: req.authUser!.id
+      }
     };
-
-    const inserted = await membersDb.insertAsync(newMember);
-    res.status(201).json({ success: true, data: inserted });
-  } catch (err: any) {
-    res.status(500).json({ success: false, error: err.message });
+    await membersDb.updateAsync({ id }, updated, {});
+    const enrollment = await enrollmentsDb.findOneAsync({ memberId: id });
+    if (enrollment) {
+      await enrollmentsDb.updateAsync(
+        { id: enrollment.id },
+        { ...enrollment, identityReview: { ...enrollment.identityReview, status: status === 'reviewed' ? 'REVIEWED' : 'REVIEW_REQUIRED', reviewedAt: updated.duplicateReview.reviewedAt, reviewedBy: req.authUser!.id } },
+        {}
+      );
+    }
+    return res.json({ success: true, data: updated });
+  } catch (error) {
+    console.error('Failed to update identity review', error);
+    return res.status(500).json({ success: false, error: 'Identity review could not be saved' });
   }
 });
 
 // PUT /api/members/:id - Update member details
-router.put('/:id', async (req: Request, res: Response) => {
+router.put('/:id', requireAuth, async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
+    const actor = req.authUser!;
+    if (!canAccessMember(req, id)) {
+      return res.status(403).json({ success: false, error: 'You are not authorized to update this member' });
+    }
     const current = await membersDb.findOneAsync({ id });
 
     if (!current) {
@@ -136,16 +145,39 @@ router.put('/:id', async (req: Request, res: Response) => {
     }
 
     const updates = req.body;
+    const isMemberSelfService = actor.role === 'member';
+    if (isMemberSelfService && Object.keys(updates).some((key) => !['phone', 'emergencyContact'].includes(key))) {
+      return res.status(403).json({ success: false, error: 'Members may only update their phone and emergency contact' });
+    }
+    if (!isMemberSelfService && updates.email !== undefined && updates.email !== current.email) {
+      return res.status(409).json({ success: false, error: 'Member account email cannot be changed from the profile editor' });
+    }
+    if (!isMemberSelfService && updates.membership) {
+      const requested = updates.membership;
+      const today = new Date().toISOString().slice(0, 10);
+      if (
+        (requested.status === 'active' && current.membership.status !== 'active' &&
+          (current.membership.paymentStatus !== 'paid' || current.membership.endDate < today)) ||
+        (requested.paymentStatus === 'paid' && current.membership.paymentStatus !== 'paid') ||
+        (requested.endDate && requested.endDate !== current.membership.endDate) ||
+        (requested.tier && requested.tier !== current.membership.tier) ||
+        (requested.pricePerMonth !== undefined && requested.pricePerMonth !== current.membership.pricePerMonth)
+      ) {
+        return res.status(409).json({ success: false, error: 'Membership activation, renewal, and plan changes require payment setup' });
+      }
+    }
 
     const updatedDocument: Member = {
       ...current,
-      ...updates,
+      ...(isMemberSelfService ? {
+        phone: typeof updates.phone === 'string' ? updates.phone.trim() : current.phone
+      } : updates),
       id: current.id, // prevent overwriting ID
       emergencyContact: updates.emergencyContact
         ? { ...current.emergencyContact, ...updates.emergencyContact }
         : current.emergencyContact,
       membership: updates.membership
-        ? { ...current.membership, ...updates.membership }
+        ? { ...current.membership, ...updates.membership, autoRenew: false }
         : current.membership
     };
 
@@ -159,7 +191,7 @@ router.put('/:id', async (req: Request, res: Response) => {
 });
 
 // DELETE /api/members/:id - Delete member document
-router.delete('/:id', async (req: Request, res: Response) => {
+router.delete('/:id', requireAuth, requireRoles('admin'), async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
     const removedCount = await membersDb.removeAsync({ id }, {});
@@ -168,85 +200,137 @@ router.delete('/:id', async (req: Request, res: Response) => {
       return res.status(404).json({ success: false, error: `Member ${id} not found` });
     }
 
+    const memberUser = await usersDb.findOneAsync({ memberId: id });
+    if (memberUser) {
+      await usersDb.updateAsync({ id: memberUser.id }, { ...memberUser, active: false }, {});
+      await sessionsDb.removeAsync({ userId: memberUser.id }, { multi: true });
+    }
+    const bookings = await classBookingsDb.findAsync({ memberId: id });
+    for (const booking of bookings) {
+      const cls = await classesDb.findOneAsync({ id: booking.classId });
+      if (cls) {
+        await classesDb.updateAsync(
+          { id: cls.id, spotsLeft: { $lt: cls.capacity } },
+          { $inc: { spotsLeft: 1 } },
+          {}
+        );
+      }
+      await classBookingsDb.removeAsync({ id: booking.id }, {});
+    }
+
     res.json({ success: true, message: `Member ${id} deleted successfully` });
   } catch (err: any) {
     res.status(500).json({ success: false, error: err.message });
   }
 });
 
-// POST /api/members/:id/renew - Quick renew (+N months)
-router.post('/:id/renew', async (req: Request, res: Response) => {
+router.post('/:id/activate', requireAuth, requireRoles('admin', 'staff'), async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
-    const months = parseInt(req.body.months as string) || 1;
-
+    if (req.body?.offlinePaymentConfirmed !== true) {
+      return res.status(400).json({ success: false, error: 'Confirm that payment was collected outside this system before activation' });
+    }
     const current = await membersDb.findOneAsync({ id });
     if (!current) {
       return res.status(404).json({ success: false, error: `Member ${id} not found` });
     }
-
-    const currentEnd = new Date(current.membership.endDate);
-    const newEnd = new Date(currentEnd);
-    newEnd.setMonth(newEnd.getMonth() + months);
-
-    const updatedDocument: Member = {
+    if (hasStudioAccess(current)) {
+      return res.status(409).json({ success: false, error: 'Membership is already active and paid' });
+    }
+    if (current.duplicateReview?.status === 'review_required') {
+      return res.status(409).json({ success: false, error: 'Complete the possible-duplicate review before activating this member' });
+    }
+    const confirmedAt = new Date().toISOString();
+    const today = confirmedAt.slice(0, 10);
+    const endDate = current.membership.endDate >= today
+      ? current.membership.endDate
+      : addMembershipMonths(today, 1);
+    const updated = {
       ...current,
       membership: {
         ...current.membership,
-        endDate: newEnd.toISOString().split('T')[0],
         status: 'active',
-        paymentStatus: 'paid'
+        paymentStatus: 'paid',
+        endDate,
+        autoRenew: false,
+        lastOfflinePaymentConfirmation: { confirmedAt, confirmedBy: req.authUser!.id }
       }
     };
+    await membersDb.updateAsync({ id }, updated, {});
+    await updateEnrollmentPayment(id, req.authUser!.id, confirmedAt, 'ACTIVE');
+    return res.json({ success: true, data: updated });
+  } catch (error) {
+    console.error('Failed to activate membership', error);
+    return res.status(500).json({ success: false, error: 'Membership could not be activated' });
+  }
+});
 
-    await membersDb.updateAsync({ id }, updatedDocument, {});
-    const refreshed = await membersDb.findOneAsync({ id });
-
-    res.json({
-      success: true,
-      message: `Renewed membership for ${months} month(s)`,
-      data: refreshed
-    });
-  } catch (err: any) {
-    res.status(500).json({ success: false, error: err.message });
+// POST /api/members/:id/renew - Record externally collected payment and renew
+router.post('/:id/renew', requireAuth, requireRoles('admin', 'staff'), async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    const months = req.body?.months;
+    if (req.body?.offlinePaymentConfirmed !== true) {
+      return res.status(400).json({ success: false, error: 'Confirm that payment was collected outside this system before renewal' });
+    }
+    if (!Number.isInteger(months) || months < 1 || months > 12) {
+      return res.status(400).json({ success: false, error: 'Renewal duration must be between 1 and 12 months' });
+    }
+    const current = await membersDb.findOneAsync({ id });
+    if (!current) {
+      return res.status(404).json({ success: false, error: `Member ${id} not found` });
+    }
+    if (current.membership.status === 'pending') {
+      return res.status(409).json({ success: false, error: 'Activate the pending enrollment before renewing it' });
+    }
+    const today = new Date().toISOString().slice(0, 10);
+    const baseDate = current.membership.endDate > today ? current.membership.endDate : today;
+    const endDate = addMembershipMonths(baseDate, months);
+    const confirmedAt = new Date().toISOString();
+    const updated = {
+      ...current,
+      membership: {
+        ...current.membership,
+        status: 'active',
+        paymentStatus: 'paid',
+        endDate,
+        autoRenew: false,
+        lastOfflinePaymentConfirmation: { confirmedAt, confirmedBy: req.authUser!.id, renewalMonths: months }
+      }
+    };
+    await membersDb.updateAsync({ id }, updated, {});
+    await updateEnrollmentPayment(id, req.authUser!.id, confirmedAt, 'RENEWED', months);
+    return res.json({ success: true, data: updated });
+  } catch (error) {
+    console.error('Failed to process renewal request', error);
+    return res.status(500).json({ success: false, error: 'Renewal request could not be processed' });
   }
 });
 
 // POST /api/members/:id/check-in - Turnstile NFC check-in simulation
-router.post('/:id/check-in', async (req: Request, res: Response) => {
+router.post('/:id/check-in', requireAuth, requireRoles('admin', 'staff'), async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
+    if (!canAccessMember(req, id)) {
+      return res.status(403).json({ success: false, error: 'You are not authorized to check in this member' });
+    }
     const current = await membersDb.findOneAsync({ id });
 
     if (!current) {
       return res.status(404).json({ success: false, error: `Member ${id} not found` });
     }
+    if (!hasStudioAccess(current)) {
+      return res.status(403).json({ success: false, error: 'Membership must be active and paid before studio access is granted' });
+    }
 
-    const today = new Date().toISOString().split('T')[0];
-    const newVisit = {
-      id: `v-${Date.now()}`,
-      date: today,
-      time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-      activity: req.body.activity || 'Studio Turnstile Access Verified'
-    };
-
-    const updatedVisits = [newVisit, ...(current.recentVisits || [])];
-    const streak = (current.attendanceStreak || 0) + 1;
-    const totalVisits = (current.totalCheckIns || 0) + 1;
-
-    const updatedDocument: Member = {
-      ...current,
-      attendanceStreak: streak,
-      totalCheckIns: totalVisits,
-      recentVisits: updatedVisits
-    };
+    const updatedDocument = recordCheckIn(current, req.body.activity || 'Staff-recorded studio access');
 
     await membersDb.updateAsync({ id }, updatedDocument, {});
     const refreshed = await membersDb.findOneAsync({ id });
 
     res.json({
       success: true,
-      message: `Access granted! Streak is now ${streak} days`,
+      message: `Access recorded! Streak is now ${updatedDocument.attendanceStreak} days`,
       data: refreshed
     });
   } catch (err: any) {

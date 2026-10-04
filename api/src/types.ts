@@ -30,6 +30,11 @@ export interface MembershipInfo {
   autoRenew: boolean;
   perks: string[];
   notes?: string;
+  lastOfflinePaymentConfirmation?: {
+    confirmedAt: string;
+    confirmedBy: string;
+    renewalMonths?: number;
+  };
 }
 
 export interface Member {
@@ -44,6 +49,16 @@ export interface Member {
   totalCheckIns: number;
   membership: MembershipInfo;
   recentVisits: VisitHistory[];
+  healthScreening?: {
+    flagged: boolean;
+    physicianClearanceRequired: boolean;
+  };
+  duplicateReview?: {
+    status: 'unverified' | 'review_required' | 'reviewed';
+    candidateMemberIds: string[];
+    reviewedAt?: string;
+    reviewedBy?: string;
+  };
   _id?: string;
 }
 
