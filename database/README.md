@@ -1,5 +1,7 @@
 # Gym Studio Document Database
 
+> This folder describes the current demo scaffold, which uses NeDB. The production architecture targets self-hosted PostgreSQL Community Edition (open-source and no license fee); operating infrastructure, backups, and support may still incur costs. See [the solution architecture](../docs/solution-architecture.md). No database migration is included in this documentation change.
+
 This folder stores the database data, initial seeds, and configurations for the open-source document database engine.
 
 ## Document Database Architecture

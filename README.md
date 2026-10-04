@@ -44,6 +44,8 @@ Open `http://localhost:5173` in your browser. The UI will automatically detect a
 - **Storage**: Persistent collection files stored in `database/data/` (`members.db`, `studio.db`, `classes.db`).
 - **Initial Seeds**: Tracked in `database/seeds/` (`members.json`, `studio.json`).
 
+> The database section and running code describe the current demo scaffold. The production target is self-hosted PostgreSQL Community Edition, an open-source database with no license fee; infrastructure and operations may still have costs. The current demo database is unchanged. See [docs/solution-architecture.md](docs/solution-architecture.md).
+
 ---
 
 ## 🔌 API Endpoints Reference

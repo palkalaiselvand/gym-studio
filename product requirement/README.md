@@ -142,6 +142,7 @@ This Product Requirements Document (PRD) suite is modularized into specialized d
 | **Pillar 6** | [`06_members_benefits_and_perks.md`](file:///c:/Source/antigravitytest/product%20requirement/06_members_benefits_and_perks.md) | Gamification streaks, tiered loyalty perks, local merchant partner marketplace, referral engine & wellness insurance credits. |
 | **Roadmap** | [`07_iterative_implementation_roadmap.md`](file:///c:/Source/antigravitytest/product%20requirement/07_iterative_implementation_roadmap.md) | Phase-by-phase delivery plan (Phase 0 through Phase 6), milestone gates, sprint schedules, resource allocation, risk mitigation & the consolidated **Product Build Plan**. |
 | **Pillar 8** | [`08_productization_licensing_deployment.md`](file:///c:/Source/antigravitytest/product%20requirement/08_productization_licensing_deployment.md) | Infra-agnostic packaging & installers, offline license/entitlement enforcement, white-labeling, self-service updates, backup/data portability, sales demo sandbox & support SLAs — the requirements that make this an independently sellable, customer-deployed product rather than a vendor-hosted service. |
+| **Solution Architecture** | [`../docs/solution-architecture.md`](../docs/solution-architecture.md) | Proposed implementation architecture, clean-architecture boundaries, technology stack, engineering standards, data/security model, logging, auditing, transaction integrity, and deployment guidance. |
 
 ---
 
