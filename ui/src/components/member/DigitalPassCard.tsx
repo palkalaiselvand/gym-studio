@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { useBranding } from '../../branding/branding';
 import { Dumbbell, LoaderCircle, QrCode, Wifi } from 'lucide-react';
 import QRCode from 'qrcode';
 import type { Member } from '../../types';
@@ -11,6 +12,7 @@ interface DigitalPassCardProps {
 }
 
 export const DigitalPassCard: React.FC<DigitalPassCardProps> = ({ member }) => {
+  const { branding } = useBranding();
   const [qrCode, setQrCode] = useState('');
   const [expiresAt, setExpiresAt] = useState('');
   const [error, setError] = useState('');
@@ -62,7 +64,7 @@ export const DigitalPassCard: React.FC<DigitalPassCardProps> = ({ member }) => {
         <div className="pass-header">
           <div className="pass-studio-name">
             <Dumbbell size={20} strokeWidth={2.5} />
-            <span>APEX ATHLETIC</span>
+            <span>{branding.name.toUpperCase()}</span>
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
             <span className="pass-tier-label">{member.membership.tier} PASS</span>

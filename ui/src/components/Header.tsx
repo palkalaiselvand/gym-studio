@@ -1,6 +1,7 @@
 import React from 'react';
 import { Dumbbell, LogOut, RotateCcw, Database, UserPlus } from 'lucide-react';
 import type { AuthenticatedUser } from '../types';
+import { useBranding } from '../branding/branding';
 
 interface HeaderProps {
   user: AuthenticatedUser | null;
@@ -19,17 +20,20 @@ export const Header: React.FC<HeaderProps> = ({
   onStartEnrollment,
   enrollmentOpen
 }) => {
+  const { branding } = useBranding();
   return (
     <header className="app-header">
       <div className="header-inner">
         <div className="brand-wrapper">
-          <div className="brand-logo-icon">
-            <Dumbbell size={24} strokeWidth={2.5} />
+          <div className="brand-logo-icon" style={branding.logo ? { overflow: 'hidden', background: 'transparent', boxShadow: 'none' } : undefined}>
+            {branding.logo
+              ? <img src={branding.logo} alt={`${branding.name} logo`} style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
+              : <Dumbbell size={24} strokeWidth={2.5} />}
           </div>
           <div className="brand-title">
-            <span>APEX STUDIO</span>
+            <span>{branding.name.toUpperCase()}</span>
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', marginTop: '2px' }}>
-              <span className="brand-subtitle">Gym & Athletic Club</span>
+              <span className="brand-subtitle">{branding.tagline}</span>
               <span
                 style={{
                   fontSize: '0.65rem',

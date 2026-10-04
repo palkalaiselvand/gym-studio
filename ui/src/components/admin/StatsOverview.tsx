@@ -1,4 +1,5 @@
 import React from 'react';
+import { useBranding } from '../../branding/branding';
 import { Users, UserCheck, DollarSign, Clock, AlertCircle } from 'lucide-react';
 import type { Member } from '../../types';
 
@@ -7,6 +8,7 @@ interface StatsOverviewProps {
 }
 
 export const StatsOverview: React.FC<StatsOverviewProps> = ({ members }) => {
+  const { money } = useBranding();
   const total = members.length;
   const activeMembers = members.filter((m) => m.membership.status === 'active');
   const activePercentage = total > 0 ? Math.round((activeMembers.length / total) * 100) : 0;
@@ -64,7 +66,7 @@ export const StatsOverview: React.FC<StatsOverviewProps> = ({ members }) => {
             <DollarSign size={18} />
           </div>
         </div>
-        <div className="stat-value">${monthlyRevenue.toLocaleString()}</div>
+        <div className="stat-value">{money(monthlyRevenue)}</div>
         <div className="stat-footer">
           <span>Recurring monthly subscriptions</span>
         </div>

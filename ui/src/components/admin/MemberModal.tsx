@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useBranding } from '../../branding/branding';
 import { X, UserPlus, Save, Sparkles } from 'lucide-react';
 import type { Member, MembershipTier, MembershipStatus, PaymentStatus } from '../../types';
 import { TIER_CONFIG } from '../../data/mockData';
@@ -16,6 +17,7 @@ export const MemberModal: React.FC<MemberModalProps> = ({
   onClose,
   onSave
 }) => {
+  const { money } = useBranding();
   const isEditing = !!memberToEdit;
 
   // Form State
@@ -198,11 +200,11 @@ export const MemberModal: React.FC<MemberModalProps> = ({
                   value={tier}
                   onChange={(e) => setTier(e.target.value as MembershipTier)}
                 >
-                  <option value="Basic">Basic (${TIER_CONFIG.Basic.monthlyPrice}/mo)</option>
-                  <option value="Silver">Silver (${TIER_CONFIG.Silver.monthlyPrice}/mo)</option>
-                  <option value="Gold">Gold (${TIER_CONFIG.Gold.monthlyPrice}/mo)</option>
-                  <option value="Platinum">Platinum (${TIER_CONFIG.Platinum.monthlyPrice}/mo)</option>
-                  <option value="VIP">VIP All-Inclusive (${TIER_CONFIG.VIP.monthlyPrice}/mo)</option>
+                  <option value="Basic">Basic ({money(TIER_CONFIG.Basic.monthlyPrice)}/mo)</option>
+                  <option value="Silver">Silver ({money(TIER_CONFIG.Silver.monthlyPrice)}/mo)</option>
+                  <option value="Gold">Gold ({money(TIER_CONFIG.Gold.monthlyPrice)}/mo)</option>
+                  <option value="Platinum">Platinum ({money(TIER_CONFIG.Platinum.monthlyPrice)}/mo)</option>
+                  <option value="VIP">VIP All-Inclusive ({money(TIER_CONFIG.VIP.monthlyPrice)}/mo)</option>
                 </select>
               </div>
             </div>

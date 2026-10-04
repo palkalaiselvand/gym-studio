@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+﻿import React, { useState, useMemo } from 'react';
 import {
   Search,
   UserPlus,
@@ -7,13 +7,16 @@ import {
   Check,
   AlertTriangle,
   RefreshCw,
-  Users
+  Users,
+  Palette
 } from 'lucide-react';
 import type { Member, MembershipStatus } from '../../types';
 import { StatsOverview } from './StatsOverview';
 import { MemberModal } from './MemberModal';
 import { MemberDeleteModal } from './MemberDeleteModal';
 import { TeamAccessPanel } from './TeamAccessPanel';
+import { BrandingPanel } from './BrandingPanel';
+import { useBranding } from '../../branding/branding';
 
 interface AdminDashboardProps {
   members: Member[];
@@ -46,6 +49,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
   onReviewIdentity,
   onToast
 }) => {
+  const { money } = useBranding();
   // Search & Filter state
   const [searchTerm, setSearchTerm] = useState('');
   const [tierFilter, setTierFilter] = useState<string>('ALL');
@@ -59,6 +63,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [memberToDelete, setMemberToDelete] = useState<Member | null>(null);
   const [isTeamAccessOpen, setIsTeamAccessOpen] = useState(false);
+  const [isBrandingOpen, setIsBrandingOpen] = useState(false);
 
   // Filtered members calculation
   const filteredMembers = useMemo(() => {
@@ -182,9 +187,15 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
             <Users size={16} /><span>{isTeamAccessOpen ? 'Hide team access' : 'Manage team access'}</span>
           </button>
         )}
+        {canManageTeam && (
+          <button className="btn-secondary" onClick={() => setIsBrandingOpen((open) => !open)}>
+            <Palette size={16} /><span>{isBrandingOpen ? 'Hide branding' : 'Branding & currency'}</span>
+          </button>
+        )}
       </div>
 
       {isTeamAccessOpen && canManageTeam && <TeamAccessPanel onBack={() => setIsTeamAccessOpen(false)} />}
+      {isBrandingOpen && canManageTeam && <BrandingPanel onBack={() => setIsBrandingOpen(false)} />}
 
       {/* Metrics Row */}
       <StatsOverview members={members} />
@@ -305,7 +316,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                           <span className="member-name">{member.name}</span>
                           <span className="member-email">{member.email}</span>
                           <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', display: 'block' }}>
-                            {member.phone} • <span style={{ fontFamily: 'var(--font-mono)' }}>{member.id}</span>
+                            {member.phone} â€¢ <span style={{ fontFamily: 'var(--font-mono)' }}>{member.id}</span>
                           </span>
                           {member.duplicateReview?.status === 'review_required' && (
                             <div style={{ marginTop: '0.35rem' }}>
@@ -323,7 +334,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
 
                     <td>
                       <span className={`badge badge-tier-${member.membership.tier}`}>
-                        {member.membership.tier} (${member.membership.pricePerMonth}/mo)
+                        {member.membership.tier} ({money(member.membership.pricePerMonth)}/mo)
                       </span>
                     </td>
 

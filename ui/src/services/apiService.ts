@@ -4,6 +4,7 @@ import type {
   EnrollmentSubmission,
   EnrollmentWaiver,
   AuthenticatedUser,
+  Branding,
   Member,
   StaffAccount,
   StudioDetails
@@ -55,6 +56,24 @@ export const apiService = {
 
   setCsrfToken(token: string | null): void {
     csrfToken = token;
+  },
+
+  async getBranding(): Promise<Branding | null> {
+    try {
+      const response = await apiFetch('/branding', { signal: AbortSignal.timeout(3000) });
+      return await readResponse<Branding>(response);
+    } catch {
+      return null;
+    }
+  },
+
+  async updateBranding(branding: Branding): Promise<Branding> {
+    const response = await apiFetch('/branding', {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(branding)
+    });
+    return readResponse<Branding>(response);
   },
 
   async getCurrentUser(): Promise<{ user: AuthenticatedUser; csrfToken: string } | null> {

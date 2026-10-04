@@ -2,6 +2,7 @@ import { createHash, randomUUID } from 'node:crypto';
 import { Router, type Request, type Response } from 'express';
 import { enrollmentsDb, membersDb, usersDb } from '../db.js';
 import { createMemberAccount, optionalAuth, startSession } from '../auth.js';
+import { formatMoney, getBranding } from '../branding.js';
 import type { Member, MembershipTier } from '../types.js';
 
 const router = Router();
@@ -189,7 +190,8 @@ router.post('/', optionalAuth, async (req: Request, res: Response) => {
     const flagged = PARQ_FIELDS.some((field) => parqResponses[field] === true);
     const waiverHash = createHash('sha256').update(`${WAIVER_VERSION}\n${WAIVER_TEXT}`).digest('hex');
     const endDate = addOneMonth(startDate);
-    const contractTerms = `You selected the ${plan.name} plan at $${plan.monthlyPrice} per month, beginning ${startDate}. This is a plan selection only. No payment method has been collected, no charge will be made, and your membership will remain pending until payment setup and studio activation are completed.`;
+    const branding = await getBranding();
+    const contractTerms = `You selected the ${plan.name} plan at ${formatMoney(plan.monthlyPrice, branding)} per month, beginning ${startDate}. This is a plan selection only. No payment method has been collected, no charge will be made, and your membership will remain pending until payment setup and studio activation are completed.`;
     const contractSnapshot = {
       memberId,
       planId: plan.id,

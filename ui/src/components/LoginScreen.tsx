@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useBranding } from '../branding/branding';
 import { Dumbbell, KeyRound, LoaderCircle } from 'lucide-react';
 interface LoginScreenProps {
   onLogin: (email: string, password: string) => Promise<void>;
@@ -6,6 +7,7 @@ interface LoginScreenProps {
 }
 
 export const LoginScreen: React.FC<LoginScreenProps> = ({ onLogin, onJoin }) => {
+  const { branding } = useBranding();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
@@ -27,7 +29,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLogin, onJoin }) => 
   return (
     <section className="login-shell glass-panel">
       <div className="enrollment-success-icon"><Dumbbell size={28} /></div>
-      <p className="enrollment-eyebrow">Apex Studio</p>
+      <p className="enrollment-eyebrow">{branding.name}</p>
       <h1>Sign in</h1>
       <p className="enrollment-lead">Member and staff access is protected by your studio account.</p>
       {error && <div className="enrollment-error" role="alert">{error}</div>}
@@ -40,7 +42,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLogin, onJoin }) => 
         </button>
       </form>
       <div className="login-divider" />
-      <p className="enrollment-muted">New to Apex?</p>
+      <p className="enrollment-muted">New to {branding.name}?</p>
       <button className="btn-secondary" type="button" onClick={onJoin}>Join the studio</button>
     </section>
   );

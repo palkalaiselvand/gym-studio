@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=Space+Grotesk:wght@500;700&family=JetBrains+Mono:wght@400;500&display=swap');
+﻿@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=Space+Grotesk:wght@500;700&family=JetBrains+Mono:wght@400;500&display=swap');
 
 :root {
   --font-main: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
@@ -15,7 +15,7 @@
 
   --border-subtle: #1f2937;
   --border-light: #374151;
-  --border-focus: #10b981;
+  --border-focus: var(--accent-primary);
 
   --text-main: #f9fafb;
   --text-secondary: #9ca3af;
@@ -23,7 +23,8 @@
 
   --accent-primary: #10b981;
   --accent-primary-hover: #059669;
-  --accent-glow: rgba(16, 185, 129, 0.25);
+  --accent-rgb: 16, 185, 129;
+  --accent-glow: rgba(var(--accent-rgb), 0.25);
 
   --accent-cyan: #06b6d4;
   --accent-amber: #f59e0b;
@@ -41,7 +42,7 @@
   --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.3);
   --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.4), 0 2px 4px -2px rgba(0, 0, 0, 0.3);
   --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.5), 0 4px 6px -4px rgba(0, 0, 0, 0.4);
-  --shadow-glow: 0 0 20px rgba(16, 185, 129, 0.2);
+  --shadow-glow: 0 0 20px rgba(var(--accent-rgb), 0.2);
 }
 
 * {
@@ -59,7 +60,7 @@ body {
   min-height: 100vh;
   overflow-x: hidden;
   background-image: 
-    radial-gradient(circle at 15% 10%, rgba(16, 185, 129, 0.08) 0%, transparent 40%),
+    radial-gradient(circle at 15% 10%, rgba(var(--accent-rgb), 0.08) 0%, transparent 40%),
     radial-gradient(circle at 85% 80%, rgba(139, 92, 246, 0.08) 0%, transparent 40%),
     radial-gradient(circle at 50% 50%, rgba(6, 182, 212, 0.04) 0%, transparent 60%);
   background-attachment: fixed;
@@ -157,12 +158,12 @@ button, input, select, textarea {
   width: 42px;
   height: 42px;
   border-radius: var(--radius-md);
-  background: linear-gradient(135deg, #10b981 0%, #06b6d4 100%);
+  background: linear-gradient(135deg, var(--accent-primary) 0%, #06b6d4 100%);
   display: flex;
   align-items: center;
   justify-content: center;
   color: #0b0f19;
-  box-shadow: 0 0 15px rgba(16, 185, 129, 0.4);
+  box-shadow: 0 0 15px rgba(var(--accent-rgb), 0.4);
 }
 
 .brand-title {
@@ -219,7 +220,7 @@ button, input, select, textarea {
 .role-pill-btn.active {
   background: var(--accent-primary);
   color: #0b0f19;
-  box-shadow: 0 2px 8px rgba(16, 185, 129, 0.35);
+  box-shadow: 0 2px 8px rgba(var(--accent-rgb), 0.35);
 }
 
 .role-pill-btn:not(.active):hover {
@@ -347,7 +348,7 @@ button, input, select, textarea {
 
 /* Payment Status Badges */
 .badge-pay-paid {
-  color: #10b981;
+  color: var(--accent-primary);
 }
 .badge-pay-pending {
   color: #f59e0b;
@@ -371,13 +372,13 @@ button, input, select, textarea {
   border: none;
   cursor: pointer;
   transition: all 0.2s ease;
-  box-shadow: 0 2px 10px rgba(16, 185, 129, 0.25);
+  box-shadow: 0 2px 10px rgba(var(--accent-rgb), 0.25);
 }
 
 .btn-primary:hover {
   background: var(--accent-primary-hover);
   transform: translateY(-1px);
-  box-shadow: 0 4px 15px rgba(16, 185, 129, 0.35);
+  box-shadow: 0 4px 15px rgba(var(--accent-rgb), 0.35);
 }
 
 .btn-secondary {
@@ -562,7 +563,7 @@ button, input, select, textarea {
 
 .search-input:focus {
   border-color: var(--accent-primary);
-  box-shadow: 0 0 0 2px rgba(16, 185, 129, 0.15);
+  box-shadow: 0 0 0 2px rgba(var(--accent-rgb), 0.15);
 }
 
 .search-icon {
@@ -774,7 +775,7 @@ button, input, select, textarea {
 
 .form-input:focus, .form-select:focus, .form-textarea:focus {
   border-color: var(--accent-primary);
-  box-shadow: 0 0 0 2px rgba(16, 185, 129, 0.2);
+  box-shadow: 0 0 0 2px rgba(var(--accent-rgb), 0.2);
 }
 
 .form-textarea {
@@ -1078,7 +1079,7 @@ button, input, select, textarea {
   margin-bottom: 1rem;
   border-radius: 50%;
   color: var(--accent-primary);
-  background: rgba(16, 185, 129, 0.12);
+  background: rgba(var(--accent-rgb), 0.12);
 }
 
 .enrollment-reference {

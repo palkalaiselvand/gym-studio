@@ -1,4 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
+import { useBranding } from '../../branding/branding';
 import {
   User,
   Calendar,
@@ -37,6 +38,7 @@ export const MemberPortal: React.FC<MemberPortalProps> = ({
   onUpdateMember,
   onToast
 }) => {
+  const { money } = useBranding();
   const [activeTab, setActiveTab] = useState<'profile' | 'studio' | 'classes' | 'rules'>('profile');
   const [isEditProfileOpen, setIsEditProfileOpen] = useState(false);
   const [bookedClassIds, setBookedClassIds] = useState<string[]>([]);
@@ -175,7 +177,7 @@ export const MemberPortal: React.FC<MemberPortalProps> = ({
                 {member.membership.tier}
               </div>
               <div className="stat-footer">
-                <span>${member.membership.pricePerMonth} / month</span>
+                <span>{money(member.membership.pricePerMonth)} / month</span>
               </div>
             </div>
 
@@ -210,7 +212,7 @@ export const MemberPortal: React.FC<MemberPortalProps> = ({
               <div style={{ display: 'flex', flexDirection: 'column', gap: '0.85rem', fontSize: '0.9rem' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid var(--border-subtle)', paddingBottom: '0.5rem' }}>
                   <span style={{ color: 'var(--text-secondary)' }}>Monthly Rate:</span>
-                  <span style={{ fontWeight: 700, color: 'var(--text-main)' }}>${member.membership.pricePerMonth}/mo</span>
+                  <span style={{ fontWeight: 700, color: 'var(--text-main)' }}>{money(member.membership.pricePerMonth)}/mo</span>
                 </div>
 
                 <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid var(--border-subtle)', paddingBottom: '0.5rem' }}>

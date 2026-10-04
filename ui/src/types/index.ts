@@ -78,6 +78,16 @@ export interface Member {
   };
 }
 
+export interface Branding {
+  name: string;
+  tagline: string;
+  logo: string | null;
+  primaryColor: string;
+  countryCode: string;
+  currency: string;
+  locale: string;
+}
+
 export interface EnrollmentPlan {
   id: MembershipTier;
   name: string;

@@ -29,3 +29,7 @@ The sample waiver requires legal review. SMS onboarding, orientation scheduling,
 ## Development
 
 From the repository root, run `npm run dev:api` or `npm run build:api`.
+
+## Branding and localization
+
+GET /api/branding is public so sign-in and enrollment can be themed; PUT /api/branding is admin-only (CSRF-protected) and validates the studio name, tagline, primary color (hex), country code and logo (PNG/JPEG/WebP/SVG data URL, about 130 KB max). Currency and locale are derived from the country code from a fixed list. Currency changes formatting only; stored prices are not converted. Settings persist in config.db and survive demo-data resets.

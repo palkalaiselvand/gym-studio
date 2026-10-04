@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
+import { useBranding } from '../../branding/branding';
 import { AlertTriangle, ArrowLeft, ArrowRight, CheckCircle2, ClipboardCheck, CreditCard, Dumbbell, LoaderCircle, ShieldCheck } from 'lucide-react';
 import { apiService } from '../../services/apiService';
 import type { EnrollmentPlan, EnrollmentResult, EnrollmentSubmission, EnrollmentWaiver } from '../../types';
@@ -40,6 +41,7 @@ function addOneMonth(dateText: string): string {
 }
 
 export const EnrollmentWizard: React.FC<EnrollmentWizardProps> = ({ onClose, onCompleted }) => {
+  const { branding, money } = useBranding();
   const [plans, setPlans] = useState<EnrollmentPlan[]>([]);
   const [waiver, setWaiver] = useState<EnrollmentWaiver | null>(null);
   const [step, setStep] = useState(0);
@@ -168,7 +170,7 @@ export const EnrollmentWizard: React.FC<EnrollmentWizardProps> = ({ onClose, onC
     <section className="enrollment-shell glass-panel">
       <div className="enrollment-heading">
         <div>
-          <p className="enrollment-eyebrow">Apex Studio membership</p>
+          <p className="enrollment-eyebrow">{branding.name} membership</p>
           <h1>Start your membership</h1>
           <p className="enrollment-lead">Choose a plan and complete the enrollment documents. No payment details are collected here.</p>
         </div>
@@ -193,7 +195,7 @@ export const EnrollmentWizard: React.FC<EnrollmentWizardProps> = ({ onClose, onC
               {plans.map((plan) => (
                 <button key={plan.id} className={`enrollment-plan-card ${planId === plan.id ? 'selected' : ''}`} type="button" onClick={() => { invalidateContractSignature(); setPlanId(plan.id); }} aria-pressed={planId === plan.id}>
                   <span className="enrollment-plan-top"><Dumbbell size={19} /><strong>{plan.name}</strong></span>
-                  <span className="enrollment-price">${plan.monthlyPrice}<small> / month</small></span>
+                  <span className="enrollment-price">{money(plan.monthlyPrice)}<small> / month</small></span>
                   <span className="enrollment-plan-description">{plan.description}</span>
                   <span className="enrollment-plan-perks">{plan.perks.slice(0, 4).map((perk) => <span key={perk}>✓ {perk}</span>)}</span>
                 </button>
@@ -250,7 +252,7 @@ export const EnrollmentWizard: React.FC<EnrollmentWizardProps> = ({ onClose, onC
           {step === 3 && (
             <div className="enrollment-form-section">
               <h2>Review and sign</h2>
-              {selectedPlan && <div className="enrollment-summary"><strong>{selectedPlan.name} · ${selectedPlan.monthlyPrice}/month</strong><span>Requested start date: {startDate}</span><span>First membership period ends: {addOneMonth(startDate)}</span></div>}
+              {selectedPlan && <div className="enrollment-summary"><strong>{selectedPlan.name} · {money(selectedPlan.monthlyPrice)}/month</strong><span>Requested start date: {startDate}</span><span>First membership period ends: {addOneMonth(startDate)}</span></div>}
               {waiver && (
                 <div className="enrollment-document">
                   <div className="enrollment-document-heading"><ClipboardCheck size={18} /><strong>Sample activity waiver · {waiver.version}</strong></div>
@@ -261,7 +263,7 @@ export const EnrollmentWizard: React.FC<EnrollmentWizardProps> = ({ onClose, onC
               <label className="form-checkbox-label enrollment-checkbox"><input type="checkbox" checked={waiverAccepted} onChange={(event) => setWaiverAccepted(event.target.checked)} /> I have read and agree to the sample activity waiver.</label>
               <div className="enrollment-document">
                 <div className="enrollment-document-heading"><ShieldCheck size={18} /><strong>Membership contract summary</strong></div>
-                <p>You selected the {selectedPlan?.name} plan at ${selectedPlan?.monthlyPrice} per month, beginning {startDate}. This is a plan selection only. No payment method has been collected, no charge will be made, and your membership will remain pending until payment setup and studio activation are completed.</p>
+                <p>You selected the {selectedPlan?.name} plan at {selectedPlan ? money(selectedPlan.monthlyPrice) : ""} per month, beginning {startDate}. This is a plan selection only. No payment method has been collected, no charge will be made, and your membership will remain pending until payment setup and studio activation are completed.</p>
               </div>
               <label className="form-checkbox-label enrollment-checkbox"><input type="checkbox" checked={contractAccepted} onChange={(event) => setContractAccepted(event.target.checked)} /> I have reviewed and accept this membership summary.</label>
               <label className="form-group"><span className="form-label">Type your full name as your signature *</span><input className="form-input" autoComplete="name" value={signerName} onChange={(event) => setSignerName(event.target.value)} required /><small className="enrollment-muted">Must match {name || 'your full name'}.</small></label>
