@@ -257,6 +257,7 @@ export const MemberModal: React.FC<MemberModalProps> = ({
                   <option value="pending">Pending Approval</option>
                   <option value="expired">Expired</option>
                   <option value="suspended">Suspended (Pause)</option>
+                  <option value="frozen">Frozen</option>
                   <option value="cancelled">Cancelled</option>
                 </select>
               </div>

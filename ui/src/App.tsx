@@ -98,6 +98,11 @@ export const App: React.FC = () => {
     setIsApiOnline(apiService.isApiOnline);
   };
 
+  const handleMemberChanged = (member: Member) => {
+    setMembers((current) => current.map((item) => item.id === member.id ? member : item));
+    setIsApiOnline(apiService.isApiOnline);
+  };
+
   const handleReviewDuplicate = async (member: Member) => {
     try {
       const updated = await apiService.reviewMemberDuplicate(member.id, 'reviewed');
@@ -226,6 +231,7 @@ export const App: React.FC = () => {
             member={members[0]}
             studio={studio}
             onUpdateMember={handleUpdateMember}
+            onMemberChanged={handleMemberChanged}
             onToast={addToast}
           />
         ) : (

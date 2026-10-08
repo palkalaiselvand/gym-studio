@@ -6,7 +6,7 @@ Roadmap source: [product requirement/07_iterative_implementation_roadmap.md](./p
 
 Stack: React/TS SPA (`ui/`), Express/TS API (`api/`), NeDB storage. Build with `npm run build:api` and `npm run build:ui`. Lint with `npm run lint --prefix ui`. There is no test runner; use isolated API smoke tests (temp `DATA_DIR`, `PORT=5150`, `ADMIN_EMAIL`, `ADMIN_PASSWORD`).
 
-Last updated: 2026-10-04 (after commit `9113ce9`)
+Last updated: 2026-10-07 (Phase 2 lifecycle work started)
 
 ## Decisions made
 
@@ -21,7 +21,7 @@ Last updated: 2026-10-04 (after commit `9113ce9`)
 | 0 | Foundations, data model, infra-agnostic baseline | Not formally tracked; basic API/UI/DB exist |
 | 1 | Members enrollment and digital membership | Done, except payment (deferred) |
 | Branding (Epic 8.4 subset) | Admin-configurable name, logo, currency, primary color | Done (commit `9113ce9`) |
-| 2 | Membership lifecycle and recurring billing | Not started |
+| 2 | Membership lifecycle and recurring billing | In progress: freeze/pause, upgrade/downgrade, cancellation, and membership-state API/UI scaffolding added |
 | 3 | Studio offerings, scheduling and retail | Not started (class booking exists from Phase 1) |
 | 4 | Facility maintenance and IoT | Not started |
 | 5 | Cross-gym network and perks | Not started |
@@ -38,7 +38,7 @@ Last updated: 2026-10-04 (after commit `9113ce9`)
 2. Apple/Google Wallet pass issuance (the QR pass is in-app only).
 3. SMS/orientation automation, government-ID/selfie KYC, legal review of the waiver.
 4. Branding follow-ups: seed/studio data still says "Apex" (`database/seeds/studio.json`, `ui/src/data/mockData.ts`); no light theme or font choice; currency changes formatting only and does not convert prices.
-5. Next planned phase: Phase 2 (freeze/pause, upgrade/downgrade, cancellation, recurring billing). Billing parts depend on the deferred payment work.
+5. Phase 2 in progress: freeze/pause, upgrade/downgrade, cancellation, and member self-service lifecycle controls are wired in; recurring billing automation and dunning are still deferred until payment plumbing is ready.
 
 ## Housekeeping
 

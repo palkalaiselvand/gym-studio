@@ -198,6 +198,64 @@ export const apiService = {
     return member;
   },
 
+  async freezeMembership(id: string, input: { startDate?: string; endDate: string; reason?: string }): Promise<Member> {
+    const response = await apiFetch(`/members/${encodeURIComponent(id)}/freeze`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(input),
+      signal: AbortSignal.timeout(4000)
+    });
+    const member = await readResponse<Member>(response);
+    this.isApiOnline = true;
+    return member;
+  },
+
+  async resumeMembership(id: string): Promise<Member> {
+    const response = await apiFetch(`/members/${encodeURIComponent(id)}/resume`, {
+      method: 'POST',
+      signal: AbortSignal.timeout(4000)
+    });
+    const member = await readResponse<Member>(response);
+    this.isApiOnline = true;
+    return member;
+  },
+
+  async upgradeMembership(id: string, tier: Member['membership']['tier']): Promise<Member> {
+    const response = await apiFetch(`/members/${encodeURIComponent(id)}/upgrade`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ tier }),
+      signal: AbortSignal.timeout(4000)
+    });
+    const member = await readResponse<Member>(response);
+    this.isApiOnline = true;
+    return member;
+  },
+
+  async downgradeMembership(id: string, tier: Member['membership']['tier']): Promise<Member> {
+    const response = await apiFetch(`/members/${encodeURIComponent(id)}/downgrade`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ tier }),
+      signal: AbortSignal.timeout(4000)
+    });
+    const member = await readResponse<Member>(response);
+    this.isApiOnline = true;
+    return member;
+  },
+
+  async cancelMembership(id: string, input?: { effectiveDate?: string; reason?: string }): Promise<Member> {
+    const response = await apiFetch(`/members/${encodeURIComponent(id)}/cancel`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(input || {}),
+      signal: AbortSignal.timeout(4000)
+    });
+    const member = await readResponse<Member>(response);
+    this.isApiOnline = true;
+    return member;
+  },
+
   async activateMember(id: string): Promise<Member> {
     const response = await apiFetch(`/members/${encodeURIComponent(id)}/activate`, {
       method: 'POST',

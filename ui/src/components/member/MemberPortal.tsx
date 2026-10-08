@@ -29,6 +29,7 @@ interface MemberPortalProps {
   member: Member;
   studio: StudioDetails;
   onUpdateMember: (id: string, updates: Partial<Member>) => Promise<void>;
+  onMemberChanged: (member: Member) => void;
   onToast: (title: string, message: string, type: 'success' | 'info' | 'warning' | 'error') => void;
 }
 
@@ -36,6 +37,7 @@ export const MemberPortal: React.FC<MemberPortalProps> = ({
   member,
   studio,
   onUpdateMember,
+  onMemberChanged,
   onToast
 }) => {
   const { money } = useBranding();
@@ -92,6 +94,80 @@ export const MemberPortal: React.FC<MemberPortalProps> = ({
     } catch (error) {
       onToast('Cancellation failed', error instanceof Error ? error.message : 'The reservation could not be cancelled.', 'error');
       return false;
+    }
+  };
+
+  const handleFreezeMembership = async () => {
+    const today = new Date().toISOString().slice(0, 10);
+    const startDate = window.prompt('Freeze start date (YYYY-MM-DD)', today);
+    if (!startDate) return;
+    const endDate = window.prompt('Freeze end date (YYYY-MM-DD)', startDate);
+    if (!endDate) return;
+    try {
+      const updated = await apiService.freezeMembership(member.id, { startDate, endDate, reason: 'Self-service pause' });
+      onMemberChanged(updated);
+      onToast('Membership paused', `Your membership is frozen until ${endDate}.`, 'info');
+    } catch (error) {
+      onToast('Freeze failed', error instanceof Error ? error.message : 'The freeze could not be saved.', 'error');
+    }
+  };
+
+  const handleResumeMembership = async () => {
+    try {
+      const updated = await apiService.resumeMembership(member.id);
+      onMemberChanged(updated);
+      onToast('Membership resumed', 'Your access and billing have resumed.', 'success');
+    } catch (error) {
+      onToast('Resume failed', error instanceof Error ? error.message : 'The resume could not be processed.', 'error');
+    }
+  };
+
+  const handleUpgradeMembership = async () => {
+    const currentTier = member.membership.tier;
+    const options = ['Basic', 'Silver', 'Gold', 'Platinum', 'VIP'];
+    const selected = window.prompt('Choose a tier to upgrade to: Basic, Silver, Gold, Platinum, VIP', options[options.indexOf(currentTier) + 1] || 'Gold');
+    if (!selected) return;
+    const tier = options.includes(selected) ? selected as Member['membership']['tier'] : null;
+    if (!tier) {
+      onToast('Invalid tier', 'Choose one of the supported membership tiers.', 'warning');
+      return;
+    }
+    try {
+      const updated = await apiService.upgradeMembership(member.id, tier);
+      onMemberChanged(updated);
+      onToast('Membership updated', `Your plan is now ${tier}.`, 'success');
+    } catch (error) {
+      onToast('Upgrade failed', error instanceof Error ? error.message : 'The tier change could not be saved.', 'error');
+    }
+  };
+
+  const handleDowngradeMembership = async () => {
+    const options = ['Basic', 'Silver', 'Gold', 'Platinum', 'VIP'];
+    const selected = window.prompt('Choose a tier to downgrade to: Basic, Silver, Gold, Platinum, VIP', member.membership.tier);
+    if (!selected) return;
+    const tier = options.includes(selected) ? selected as Member['membership']['tier'] : null;
+    if (!tier) {
+      onToast('Invalid tier', 'Choose one of the supported membership tiers.', 'warning');
+      return;
+    }
+    try {
+      const updated = await apiService.downgradeMembership(member.id, tier);
+      onMemberChanged(updated);
+      onToast('Downgrade scheduled', `Your plan will switch to ${tier} at your next renewal date.`, 'info');
+    } catch (error) {
+      onToast('Downgrade failed', error instanceof Error ? error.message : 'The downgrade could not be scheduled.', 'error');
+    }
+  };
+
+  const handleCancelMembership = async () => {
+    const confirmed = window.confirm('Cancel this membership? This will end access and stop billing.');
+    if (!confirmed) return;
+    try {
+      const updated = await apiService.cancelMembership(member.id, { effectiveDate: new Date().toISOString().slice(0, 10), reason: 'Self-service cancellation' });
+      onMemberChanged(updated);
+      onToast('Membership cancelled', 'Your membership is now cancelled.', 'warning');
+    } catch (error) {
+      onToast('Cancellation failed', error instanceof Error ? error.message : 'The cancellation could not be completed.', 'error');
     }
   };
 
@@ -192,6 +268,32 @@ export const MemberPortal: React.FC<MemberPortalProps> = ({
               <div className="stat-footer">
                 <span>Expires: {member.membership.endDate}</span>
               </div>
+            </div>
+          </div>
+
+          <div className="glass-panel" style={{ padding: '1.25rem' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1rem', gap: '0.75rem', flexWrap: 'wrap' }}>
+              <h3 style={{ fontSize: '1.1rem', margin: 0 }}>Manage your membership</h3>
+              <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+                <button type="button" className="btn-secondary" onClick={() => { void handleFreezeMembership(); }}>
+                  Pause membership
+                </button>
+                <button type="button" className="btn-secondary" onClick={() => { void handleResumeMembership(); }}>
+                  Resume
+                </button>
+                <button type="button" className="btn-secondary" onClick={() => { void handleUpgradeMembership(); }}>
+                  Upgrade plan
+                </button>
+                <button type="button" className="btn-secondary" onClick={() => { void handleDowngradeMembership(); }}>
+                  Downgrade plan
+                </button>
+                <button type="button" className="btn-secondary" onClick={() => { void handleCancelMembership(); }}>
+                  Cancel
+                </button>
+              </div>
+            </div>
+            <div style={{ color: 'var(--text-secondary)', fontSize: '0.85rem' }}>
+              Freeze, plan changes, and cancellations are tracked in the membership lifecycle and can be reviewed by the studio team.
             </div>
           </div>
 

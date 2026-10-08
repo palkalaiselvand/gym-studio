@@ -1,11 +1,37 @@
 import { Router, Request, Response } from 'express';
 import { recordCheckIn } from '../attendance.js';
-import { addMembershipMonths, hasStudioAccess } from '../membership.js';
+import { addMembershipMonths, calculateProratedCharge, getMembershipTierPrice, hasStudioAccess } from '../membership.js';
 import { classBookingsDb, classesDb, enrollmentsDb, membersDb, sessionsDb, usersDb } from '../db.js';
 import type { Member, MembershipTier, MembershipStatus, PaymentStatus } from '../types.js';
 import { canAccessMember, requireAuth, requireRoles } from '../auth.js';
 
 const router = Router();
+
+const TIER_PRICE_MAP: Record<MembershipTier, number> = {
+  Basic: 79,
+  Silver: 129,
+  Gold: 179,
+  Platinum: 249,
+  VIP: 329
+};
+
+function normalizeDateField(value: unknown): string | undefined {
+  if (typeof value === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(value)) {
+    return value;
+  }
+  return undefined;
+}
+
+function readMemberMembershipChange(payload: Record<string, any>): { tier?: MembershipTier; reason?: string; startDate?: string; endDate?: string; effectiveDate?: string } {
+  const tierValue = payload?.tier;
+  const tier = typeof tierValue === 'string' && tierValue in TIER_PRICE_MAP ? tierValue as MembershipTier : undefined;
+  const reason = typeof payload?.reason === 'string' && payload.reason.trim() ? payload.reason.trim() : undefined;
+  const startDate = normalizeDateField(payload?.startDate);
+  const endDate = normalizeDateField(payload?.endDate);
+  const effectiveDate = normalizeDateField(payload?.effectiveDate);
+
+  return { tier, reason, startDate, endDate, effectiveDate };
+}
 
 async function updateEnrollmentPayment(
   memberId: string,
@@ -31,6 +57,223 @@ async function updateEnrollmentPayment(
     {}
   );
 }
+
+router.post('/:id/freeze', requireAuth, async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    if (!canAccessMember(req, id)) {
+      return res.status(403).json({ success: false, error: 'You are not authorized to manage this member' });
+    }
+
+    const current = await membersDb.findOneAsync({ id });
+    if (!current) {
+      return res.status(404).json({ success: false, error: `Member ${id} not found` });
+    }
+
+    if (current.membership.status === 'cancelled') {
+      return res.status(409).json({ success: false, error: 'Cancelled memberships cannot be frozen' });
+    }
+
+    const payload = readMemberMembershipChange(req.body || {});
+    const startDate = payload.startDate || new Date().toISOString().slice(0, 10);
+    const endDate = payload.endDate;
+    if (!endDate || endDate < startDate) {
+      return res.status(400).json({ success: false, error: 'Freeze end date must be after the start date' });
+    }
+
+    const freezeDurationDays = Math.max(0, (new Date(`${endDate}T00:00:00.000Z`).getTime() - new Date(`${startDate}T00:00:00.000Z`).getTime()) / (1000 * 60 * 60 * 24));
+    if (freezeDurationDays > 90) {
+      return res.status(400).json({ success: false, error: 'Freezes are limited to 90 days in the current prototype' });
+    }
+
+    const updated = {
+      ...current,
+      membership: {
+        ...current.membership,
+        status: 'frozen',
+        paymentStatus: 'paid',
+        autoRenew: false,
+        freeze: {
+          startDate,
+          endDate,
+          reason: payload.reason || 'Requested by member'
+        },
+        notes: `Membership paused from ${startDate} to ${endDate}. Billing is suspended until resume.`
+      }
+    };
+
+    await membersDb.updateAsync({ id }, updated, {});
+    return res.json({ success: true, data: updated });
+  } catch (error) {
+    console.error('Failed to freeze membership', error);
+    return res.status(500).json({ success: false, error: 'Membership freeze could not be saved' });
+  }
+});
+
+router.post('/:id/resume', requireAuth, async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    if (!canAccessMember(req, id)) {
+      return res.status(403).json({ success: false, error: 'You are not authorized to manage this member' });
+    }
+
+    const current = await membersDb.findOneAsync({ id });
+    if (!current) {
+      return res.status(404).json({ success: false, error: `Member ${id} not found` });
+    }
+
+    if (current.membership.status !== 'frozen') {
+      return res.status(409).json({ success: false, error: 'Only frozen memberships can be resumed' });
+    }
+
+    const updated = {
+      ...current,
+      membership: {
+        ...current.membership,
+        status: 'active',
+        paymentStatus: 'paid',
+        autoRenew: false,
+        freeze: undefined,
+        notes: 'Membership resumed after a freeze.'
+      }
+    };
+
+    await membersDb.updateAsync({ id }, updated, {});
+    return res.json({ success: true, data: updated });
+  } catch (error) {
+    console.error('Failed to resume membership', error);
+    return res.status(500).json({ success: false, error: 'Membership resume could not be saved' });
+  }
+});
+
+router.post('/:id/upgrade', requireAuth, async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    if (!canAccessMember(req, id)) {
+      return res.status(403).json({ success: false, error: 'You are not authorized to manage this member' });
+    }
+
+    const current = await membersDb.findOneAsync({ id });
+    if (!current) {
+      return res.status(404).json({ success: false, error: `Member ${id} not found` });
+    }
+
+    const payload = readMemberMembershipChange(req.body || {});
+    if (!payload.tier) {
+      return res.status(400).json({ success: false, error: 'A valid membership tier is required for an upgrade' });
+    }
+
+    if (payload.tier === current.membership.tier) {
+      return res.status(409).json({ success: false, error: 'This member is already on the selected tier' });
+    }
+
+    const remainingDays = Math.max(1, Math.ceil((new Date(`${current.membership.endDate}T00:00:00.000Z`).getTime() - Date.now()) / (1000 * 60 * 60 * 24)));
+    const targetedCharge = calculateProratedCharge(current.membership.tier, payload.tier, remainingDays);
+    const updated = {
+      ...current,
+      membership: {
+        ...current.membership,
+        tier: payload.tier,
+        pricePerMonth: getMembershipTierPrice(payload.tier),
+        status: 'active',
+        paymentStatus: 'paid',
+        autoRenew: false,
+        pendingDowngradeTier: null,
+        freeze: undefined,
+        notes: `Upgraded to ${payload.tier}. Estimated prorated charge: $${targetedCharge.toFixed(2)}.`
+      }
+    };
+
+    await membersDb.updateAsync({ id }, updated, {});
+    return res.json({ success: true, data: updated });
+  } catch (error) {
+    console.error('Failed to upgrade membership', error);
+    return res.status(500).json({ success: false, error: 'Membership upgrade could not be saved' });
+  }
+});
+
+router.post('/:id/downgrade', requireAuth, async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    if (!canAccessMember(req, id)) {
+      return res.status(403).json({ success: false, error: 'You are not authorized to manage this member' });
+    }
+
+    const current = await membersDb.findOneAsync({ id });
+    if (!current) {
+      return res.status(404).json({ success: false, error: `Member ${id} not found` });
+    }
+
+    const payload = readMemberMembershipChange(req.body || {});
+    if (!payload.tier) {
+      return res.status(400).json({ success: false, error: 'A valid membership tier is required for a downgrade' });
+    }
+
+    if (payload.tier === current.membership.tier) {
+      return res.status(409).json({ success: false, error: 'This member is already on the selected tier' });
+    }
+
+    const updated = {
+      ...current,
+      membership: {
+        ...current.membership,
+        status: 'active',
+        autoRenew: false,
+        pendingDowngradeTier: payload.tier,
+        notes: `${current.name} will switch to ${payload.tier} at the next renewal date.`
+      }
+    };
+
+    await membersDb.updateAsync({ id }, updated, {});
+    return res.json({ success: true, data: updated });
+  } catch (error) {
+    console.error('Failed to schedule downgrade', error);
+    return res.status(500).json({ success: false, error: 'Membership downgrade could not be saved' });
+  }
+});
+
+router.post('/:id/cancel', requireAuth, async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    if (!canAccessMember(req, id)) {
+      return res.status(403).json({ success: false, error: 'You are not authorized to manage this member' });
+    }
+
+    const current = await membersDb.findOneAsync({ id });
+    if (!current) {
+      return res.status(404).json({ success: false, error: `Member ${id} not found` });
+    }
+
+    const payload = readMemberMembershipChange(req.body || {});
+    const effectiveDate = payload.effectiveDate || new Date().toISOString().slice(0, 10);
+    const reason = payload.reason || 'Self-service cancellation';
+
+    const updated = {
+      ...current,
+      membership: {
+        ...current.membership,
+        status: 'cancelled',
+        paymentStatus: 'pending',
+        autoRenew: false,
+        freeze: undefined,
+        pendingDowngradeTier: null,
+        cancellation: {
+          requestedAt: new Date().toISOString(),
+          effectiveDate,
+          reason,
+          status: 'requested'
+        },
+        notes: `Cancelled effective ${effectiveDate}. Reason: ${reason}`
+      }
+    };
+
+    await membersDb.updateAsync({ id }, updated, {});
+    return res.json({ success: true, data: updated });
+  } catch (error) {
+    console.error('Failed to cancel membership', error);
+    return res.status(500).json({ success: false, error: 'Membership cancellation could not be saved' });
+  }
+});
 
 // GET /api/members - List members with optional query filtering
 router.get('/', requireAuth, requireRoles('admin', 'staff', 'franchise-owner'), async (req: Request, res: Response) => {

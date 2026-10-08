@@ -7,3 +7,14 @@ export function hasStudioAccess(member: Member): boolean {
     member.membership.startDate <= today &&
     member.membership.endDate >= today;
 }
+
+export function getMembershipTierPrice(tier: Member['membership']['tier']): number {
+  const priceMap: Record<Member['membership']['tier'], number> = {
+    Basic: 79,
+    Silver: 129,
+    Gold: 179,
+    Platinum: 249,
+    VIP: 329
+  };
+  return priceMap[tier] ?? 0;
+}

@@ -19,7 +19,7 @@ export interface StaffAccount {
 
 export type MembershipTier = 'Basic' | 'Silver' | 'Gold' | 'Platinum' | 'VIP';
 
-export type MembershipStatus = 'active' | 'pending' | 'expired' | 'suspended' | 'cancelled';
+export type MembershipStatus = 'active' | 'pending' | 'expired' | 'suspended' | 'cancelled' | 'frozen';
 
 export type PaymentStatus = 'paid' | 'pending' | 'overdue';
 
@@ -47,6 +47,18 @@ export interface MembershipInfo {
   autoRenew: boolean;
   perks: string[];
   notes?: string;
+  freeze?: {
+    startDate: string;
+    endDate: string;
+    reason?: string;
+  };
+  pendingDowngradeTier?: MembershipTier | null;
+  cancellation?: {
+    requestedAt?: string;
+    effectiveDate?: string;
+    reason?: string;
+    status?: 'requested' | 'completed';
+  };
   lastOfflinePaymentConfirmation?: {
     confirmedAt: string;
     confirmedBy: string;
