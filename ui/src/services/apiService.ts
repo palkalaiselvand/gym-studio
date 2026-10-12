@@ -6,6 +6,8 @@ import type {
   AuthenticatedUser,
   Branding,
   Member,
+  MembershipCancellationReason,
+  MembershipFreezeReason,
   StaffAccount,
   StudioDetails
 } from '../types';
@@ -198,7 +200,7 @@ export const apiService = {
     return member;
   },
 
-  async freezeMembership(id: string, input: { startDate?: string; endDate: string; reason?: string }): Promise<Member> {
+  async freezeMembership(id: string, input: { startDate?: string; endDate: string; reason: MembershipFreezeReason }): Promise<Member> {
     const response = await apiFetch(`/members/${encodeURIComponent(id)}/freeze`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -244,11 +246,25 @@ export const apiService = {
     return member;
   },
 
-  async cancelMembership(id: string, input?: { effectiveDate?: string; reason?: string }): Promise<Member> {
+  async cancelMembership(id: string, input: {
+    reason: MembershipCancellationReason;
+    retentionOffer: 'pause' | 'downgrade' | 'declined';
+    offerTier?: Member['membership']['tier'];
+  }): Promise<Member> {
     const response = await apiFetch(`/members/${encodeURIComponent(id)}/cancel`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(input || {}),
+      signal: AbortSignal.timeout(4000)
+    });
+    const member = await readResponse<Member>(response);
+    this.isApiOnline = true;
+    return member;
+  },
+
+  async cancelScheduledPlanChange(id: string): Promise<Member> {
+    const response = await apiFetch(`/members/${encodeURIComponent(id)}/cancel-plan-change`, {
+      method: 'POST',
       signal: AbortSignal.timeout(4000)
     });
     const member = await readResponse<Member>(response);

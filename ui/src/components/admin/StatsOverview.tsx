@@ -1,6 +1,6 @@
 import React from 'react';
 import { useBranding } from '../../branding/branding';
-import { Users, UserCheck, DollarSign, Clock, AlertCircle } from 'lucide-react';
+import { Users, UserCheck, DollarSign, Clock, AlertCircle, PauseCircle, HeartHandshake, CalendarX2 } from 'lucide-react';
 import type { Member } from '../../types';
 
 interface StatsOverviewProps {
@@ -29,6 +29,14 @@ export const StatsOverview: React.FC<StatsOverviewProps> = ({ members }) => {
 
   // Overdue payments count
   const overdueCount = members.filter((m) => m.membership.paymentStatus === 'overdue').length;
+  const pausedMembers = members.filter((m) => m.membership.freeze || (m.membership.freezeHistory?.length || 0) > 0).length;
+  const pauseUtilization = total > 0 ? Math.round((pausedMembers / total) * 100) : 0;
+  const retentionEvents = members.flatMap((m) => m.membership.retentionHistory || []);
+  const acceptedOffers = retentionEvents.filter((event) => event.accepted).length;
+  const retentionAcceptance = retentionEvents.length > 0
+    ? Math.round((acceptedOffers / retentionEvents.length) * 100)
+    : 0;
+  const cancellationRequests = members.filter((m) => m.membership.cancellation?.status === 'requested').length;
 
   return (
     <div className="metrics-grid">
@@ -61,14 +69,14 @@ export const StatsOverview: React.FC<StatsOverviewProps> = ({ members }) => {
 
       <div className="glass-panel stat-card">
         <div className="stat-header">
-          <span className="stat-title">Monthly MRR</span>
+          <span className="stat-title">Estimated Monthly Value</span>
           <div className="stat-icon-wrapper" style={{ color: '#a78bfa' }}>
             <DollarSign size={18} />
           </div>
         </div>
         <div className="stat-value">{money(monthlyRevenue)}</div>
         <div className="stat-footer">
-          <span>Recurring monthly subscriptions</span>
+          <span>Plan values only; no charges are processed</span>
         </div>
       </div>
 
@@ -89,7 +97,7 @@ export const StatsOverview: React.FC<StatsOverviewProps> = ({ members }) => {
 
       <div className="glass-panel stat-card">
         <div className="stat-header">
-          <span className="stat-title">Payment Attention</span>
+          <span className="stat-title">Overdue Status Records</span>
           <div className="stat-icon-wrapper" style={{ color: '#f43f5e' }}>
             <AlertCircle size={18} />
           </div>
@@ -98,7 +106,46 @@ export const StatsOverview: React.FC<StatsOverviewProps> = ({ members }) => {
           {overdueCount}
         </div>
         <div className="stat-footer">
-          <span>Members with overdue accounts</span>
+          <span>Payment is handled outside this app</span>
+        </div>
+      </div>
+
+      <div className="glass-panel stat-card">
+        <div className="stat-header">
+          <span className="stat-title">Pause Utilization</span>
+          <div className="stat-icon-wrapper" style={{ color: '#38bdf8' }}>
+            <PauseCircle size={18} />
+          </div>
+        </div>
+        <div className="stat-value">{pauseUtilization}%</div>
+        <div className="stat-footer">
+          <span>{pausedMembers} members have paused or used a pause</span>
+        </div>
+      </div>
+
+      <div className="glass-panel stat-card">
+        <div className="stat-header">
+          <span className="stat-title">Retention Offer Acceptance</span>
+          <div className="stat-icon-wrapper" style={{ color: '#34d399' }}>
+            <HeartHandshake size={18} />
+          </div>
+        </div>
+        <div className="stat-value">{retentionAcceptance}%</div>
+        <div className="stat-footer">
+          <span>{acceptedOffers} accepted of {retentionEvents.length} offers</span>
+        </div>
+      </div>
+
+      <div className="glass-panel stat-card">
+        <div className="stat-header">
+          <span className="stat-title">Scheduled Cancellations</span>
+          <div className="stat-icon-wrapper" style={{ color: '#fbbf24' }}>
+            <CalendarX2 size={18} />
+          </div>
+        </div>
+        <div className="stat-value">{cancellationRequests}</div>
+        <div className="stat-footer">
+          <span>Access remains through each effective date</span>
         </div>
       </div>
     </div>

@@ -1,36 +1,82 @@
 import { Router, Request, Response } from 'express';
 import { recordCheckIn } from '../attendance.js';
-import { addMembershipMonths, calculateProratedCharge, getMembershipTierPrice, hasStudioAccess } from '../membership.js';
+import {
+  addCalendarDays,
+  addMembershipMonths,
+  getMembershipTierPrice,
+  getMembershipTierRank,
+  hasStudioAccess,
+  isCalendarDate,
+  reconcileMemberLifecycle
+} from '../membership.js';
 import { classBookingsDb, classesDb, enrollmentsDb, membersDb, sessionsDb, usersDb } from '../db.js';
-import type { Member, MembershipTier, MembershipStatus, PaymentStatus } from '../types.js';
+import type {
+  Member,
+  MembershipCancellationReason,
+  MembershipFreezeReason,
+  MembershipTier
+} from '../types.js';
 import { canAccessMember, requireAuth, requireRoles } from '../auth.js';
 
 const router = Router();
 
-const TIER_PRICE_MAP: Record<MembershipTier, number> = {
-  Basic: 79,
-  Silver: 129,
-  Gold: 179,
-  Platinum: 249,
-  VIP: 329
-};
+const VALID_TIERS = new Set<MembershipTier>(['Basic', 'Silver', 'Gold', 'Platinum', 'VIP']);
 
 function normalizeDateField(value: unknown): string | undefined {
-  if (typeof value === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(value)) {
-    return value;
-  }
-  return undefined;
+  return isCalendarDate(value) ? value : undefined;
 }
 
-function readMemberMembershipChange(payload: Record<string, any>): { tier?: MembershipTier; reason?: string; startDate?: string; endDate?: string; effectiveDate?: string } {
-  const tierValue = payload?.tier;
-  const tier = typeof tierValue === 'string' && tierValue in TIER_PRICE_MAP ? tierValue as MembershipTier : undefined;
-  const reason = typeof payload?.reason === 'string' && payload.reason.trim() ? payload.reason.trim() : undefined;
-  const startDate = normalizeDateField(payload?.startDate);
-  const endDate = normalizeDateField(payload?.endDate);
-  const effectiveDate = normalizeDateField(payload?.effectiveDate);
+function readMemberMembershipChange(payload: Record<string, unknown>): { tier?: MembershipTier; reason?: string; startDate?: string; endDate?: string; effectiveDate?: string } {
+  const tierValue = payload.tier;
+  const tier = typeof tierValue === 'string' && VALID_TIERS.has(tierValue as MembershipTier)
+    ? tierValue as MembershipTier
+    : undefined;
+  const reason = typeof payload.reason === 'string' && payload.reason.trim() ? payload.reason.trim() : undefined;
+  const startDate = normalizeDateField(payload.startDate);
+  const endDate = normalizeDateField(payload.endDate);
+  const effectiveDate = normalizeDateField(payload.effectiveDate);
 
   return { tier, reason, startDate, endDate, effectiveDate };
+}
+
+const CANCELLATION_REASONS = new Set<MembershipCancellationReason>([
+  'price', 'relocation', 'injury', 'dissatisfaction', 'competitor', 'other'
+]);
+const FREEZE_REASONS = new Set<MembershipFreezeReason>([
+  'travel', 'medical', 'military', 'other', 'retention'
+]);
+const FREEZE_MIN_DAYS = 14;
+const FREEZE_MAX_DAYS_PER_YEAR = 90;
+
+function durationDays(startDate: string, endDate: string): number {
+  return Math.floor(
+    (Date.parse(`${endDate}T00:00:00.000Z`) - Date.parse(`${startDate}T00:00:00.000Z`)) / 86_400_000
+  );
+}
+
+function overlapDaysInYear(startDate: string, endDate: string, year: number): number {
+  const yearStart = `${year}-01-01`;
+  const yearEndExclusive = `${year + 1}-01-01`;
+  const overlapStart = startDate > yearStart ? startDate : yearStart;
+  const overlapEnd = endDate < yearEndExclusive ? endDate : yearEndExclusive;
+  return overlapStart < overlapEnd ? durationDays(overlapStart, overlapEnd) : 0;
+}
+
+function getMemberForLifecycle(member: Member): Member {
+  return reconcileMemberLifecycle(member);
+}
+
+async function saveLifecycleMember(member: Member): Promise<void> {
+  await membersDb.updateAsync({ id: member.id }, member, {});
+}
+
+function canChangeLifecycle(member: Member): boolean {
+  const today = new Date().toISOString().slice(0, 10);
+  return member.membership.status === 'active' &&
+    member.membership.paymentStatus === 'paid' &&
+    member.membership.startDate <= today &&
+    member.membership.endDate >= today &&
+    member.membership.cancellation?.status !== 'requested';
 }
 
 async function updateEnrollmentPayment(
@@ -65,44 +111,69 @@ router.post('/:id/freeze', requireAuth, async (req: Request, res: Response) => {
       return res.status(403).json({ success: false, error: 'You are not authorized to manage this member' });
     }
 
-    const current = await membersDb.findOneAsync({ id });
-    if (!current) {
+    const found = await membersDb.findOneAsync({ id });
+    if (!found) {
       return res.status(404).json({ success: false, error: `Member ${id} not found` });
     }
-
-    if (current.membership.status === 'cancelled') {
-      return res.status(409).json({ success: false, error: 'Cancelled memberships cannot be frozen' });
+    const current = getMemberForLifecycle(found);
+    if (!canChangeLifecycle(current)) {
+      return res.status(409).json({ success: false, error: 'Only a current, paid membership without a pending cancellation can be paused' });
+    }
+    if (current.membership.freeze || current.membership.pendingPlanChange || current.membership.pendingDowngradeTier) {
+      return res.status(409).json({ success: false, error: 'Resolve the existing pause or scheduled plan change first' });
     }
 
     const payload = readMemberMembershipChange(req.body || {});
+    if ((req.body?.startDate !== undefined && !isCalendarDate(req.body.startDate)) ||
+      (req.body?.endDate !== undefined && !isCalendarDate(req.body.endDate))) {
+      return res.status(400).json({ success: false, error: 'Freeze dates must be valid calendar dates' });
+    }
     const startDate = payload.startDate || new Date().toISOString().slice(0, 10);
     const endDate = payload.endDate;
-    if (!endDate || endDate < startDate) {
-      return res.status(400).json({ success: false, error: 'Freeze end date must be after the start date' });
+    const reason = req.body?.reason;
+    if (!isCalendarDate(startDate) || !endDate || !isCalendarDate(endDate) || endDate < startDate) {
+      return res.status(400).json({ success: false, error: 'Enter valid freeze start and resume dates' });
     }
-
-    const freezeDurationDays = Math.max(0, (new Date(`${endDate}T00:00:00.000Z`).getTime() - new Date(`${startDate}T00:00:00.000Z`).getTime()) / (1000 * 60 * 60 * 24));
-    if (freezeDurationDays > 90) {
-      return res.status(400).json({ success: false, error: 'Freezes are limited to 90 days in the current prototype' });
+    const today = new Date().toISOString().slice(0, 10);
+    if (startDate < today) {
+      return res.status(400).json({ success: false, error: 'A freeze cannot start in the past' });
+    }
+    if (typeof reason !== 'string' || !FREEZE_REASONS.has(reason as MembershipFreezeReason) || reason === 'retention') {
+      return res.status(400).json({ success: false, error: 'Choose travel, medical, military, or other as the freeze reason' });
+    }
+    const requestedDays = durationDays(startDate, endDate);
+    if (requestedDays < FREEZE_MIN_DAYS) {
+      return res.status(400).json({ success: false, error: 'A freeze must be at least 14 days' });
+    }
+    if (requestedDays > FREEZE_MAX_DAYS_PER_YEAR) {
+      return res.status(400).json({ success: false, error: 'A single freeze cannot exceed 90 days' });
+    }
+    for (let year = Number(startDate.slice(0, 4)); year <= Number(endDate.slice(0, 4)); year += 1) {
+      const usedDays = (current.membership.freezeHistory || []).reduce(
+        (total, window) => total + overlapDaysInYear(window.startDate, window.endDate, year),
+        0
+      );
+      const requestedInYear = overlapDaysInYear(startDate, endDate, year);
+      if (usedDays + requestedInYear > FREEZE_MAX_DAYS_PER_YEAR) {
+        return res.status(400).json({ success: false, error: `Freezes are limited to 90 days per calendar year (${year})` });
+      }
     }
 
     const updated = {
       ...current,
       membership: {
         ...current.membership,
-        status: 'frozen',
-        paymentStatus: 'paid',
-        autoRenew: false,
+        status: startDate <= today ? 'frozen' as const : 'active' as const,
         freeze: {
           startDate,
           endDate,
-          reason: payload.reason || 'Requested by member'
+          reason: reason as MembershipFreezeReason
         },
-        notes: `Membership paused from ${startDate} to ${endDate}. Billing is suspended until resume.`
+        notes: `Access pause scheduled from ${startDate} until ${endDate}. Payment processing is not configured.`
       }
     };
 
-    await membersDb.updateAsync({ id }, updated, {});
+    await saveLifecycleMember(updated);
     return res.json({ success: true, data: updated });
   } catch (error) {
     console.error('Failed to freeze membership', error);
@@ -117,28 +188,37 @@ router.post('/:id/resume', requireAuth, async (req: Request, res: Response) => {
       return res.status(403).json({ success: false, error: 'You are not authorized to manage this member' });
     }
 
-    const current = await membersDb.findOneAsync({ id });
-    if (!current) {
+    const found = await membersDb.findOneAsync({ id });
+    if (!found) {
       return res.status(404).json({ success: false, error: `Member ${id} not found` });
     }
+    const current = getMemberForLifecycle(found);
 
-    if (current.membership.status !== 'frozen') {
-      return res.status(409).json({ success: false, error: 'Only frozen memberships can be resumed' });
+    if (!current.membership.freeze) {
+      return res.status(409).json({ success: false, error: 'This membership has no scheduled or active pause' });
     }
 
+    const today = new Date().toISOString().slice(0, 10);
+    const history = [...(current.membership.freezeHistory || [])];
+    if (current.membership.freeze.startDate <= today) {
+      history.push({
+        ...current.membership.freeze,
+        endDate: today < current.membership.freeze.endDate ? today : current.membership.freeze.endDate,
+        resumedAt: new Date().toISOString()
+      });
+    }
     const updated = {
       ...current,
       membership: {
         ...current.membership,
-        status: 'active',
-        paymentStatus: 'paid',
-        autoRenew: false,
+        status: current.membership.endDate < today ? 'expired' as const : 'active' as const,
         freeze: undefined,
-        notes: 'Membership resumed after a freeze.'
+        freezeHistory: history,
+        notes: 'Membership access pause ended. Payment processing is not configured.'
       }
     };
 
-    await membersDb.updateAsync({ id }, updated, {});
+    await saveLifecycleMember(updated);
     return res.json({ success: true, data: updated });
   } catch (error) {
     console.error('Failed to resume membership', error);
@@ -153,38 +233,40 @@ router.post('/:id/upgrade', requireAuth, async (req: Request, res: Response) => 
       return res.status(403).json({ success: false, error: 'You are not authorized to manage this member' });
     }
 
-    const current = await membersDb.findOneAsync({ id });
-    if (!current) {
+    const found = await membersDb.findOneAsync({ id });
+    if (!found) {
       return res.status(404).json({ success: false, error: `Member ${id} not found` });
     }
+    const current = getMemberForLifecycle(found);
 
     const payload = readMemberMembershipChange(req.body || {});
     if (!payload.tier) {
       return res.status(400).json({ success: false, error: 'A valid membership tier is required for an upgrade' });
     }
 
-    if (payload.tier === current.membership.tier) {
-      return res.status(409).json({ success: false, error: 'This member is already on the selected tier' });
+    if (!canChangeLifecycle(current)) {
+      return res.status(409).json({ success: false, error: 'Only a current, paid membership without a pending cancellation can change tiers' });
     }
-
-    const remainingDays = Math.max(1, Math.ceil((new Date(`${current.membership.endDate}T00:00:00.000Z`).getTime() - Date.now()) / (1000 * 60 * 60 * 24)));
-    const targetedCharge = calculateProratedCharge(current.membership.tier, payload.tier, remainingDays);
+    if (getMembershipTierRank(payload.tier) <= getMembershipTierRank(current.membership.tier)) {
+      return res.status(400).json({ success: false, error: 'Choose a tier above the current tier to schedule an upgrade' });
+    }
+    if (current.membership.freeze || current.membership.pendingPlanChange || current.membership.pendingDowngradeTier) {
+      return res.status(409).json({ success: false, error: 'Resolve the existing pause or scheduled plan change first' });
+    }
     const updated = {
       ...current,
       membership: {
         ...current.membership,
-        tier: payload.tier,
-        pricePerMonth: getMembershipTierPrice(payload.tier),
-        status: 'active',
-        paymentStatus: 'paid',
-        autoRenew: false,
-        pendingDowngradeTier: null,
-        freeze: undefined,
-        notes: `Upgraded to ${payload.tier}. Estimated prorated charge: $${targetedCharge.toFixed(2)}.`
+        pendingPlanChange: {
+          tier: payload.tier,
+          effectiveDate: addCalendarDays(current.membership.endDate, 1),
+          requestedAt: new Date().toISOString()
+        },
+        notes: `Upgrade to ${payload.tier} scheduled for ${addCalendarDays(current.membership.endDate, 1)}. No payment has been collected or scheduled.`
       }
     };
 
-    await membersDb.updateAsync({ id }, updated, {});
+    await saveLifecycleMember(updated);
     return res.json({ success: true, data: updated });
   } catch (error) {
     console.error('Failed to upgrade membership', error);
@@ -199,36 +281,77 @@ router.post('/:id/downgrade', requireAuth, async (req: Request, res: Response) =
       return res.status(403).json({ success: false, error: 'You are not authorized to manage this member' });
     }
 
-    const current = await membersDb.findOneAsync({ id });
-    if (!current) {
+    const found = await membersDb.findOneAsync({ id });
+    if (!found) {
       return res.status(404).json({ success: false, error: `Member ${id} not found` });
     }
+    const current = getMemberForLifecycle(found);
 
     const payload = readMemberMembershipChange(req.body || {});
     if (!payload.tier) {
       return res.status(400).json({ success: false, error: 'A valid membership tier is required for a downgrade' });
     }
 
-    if (payload.tier === current.membership.tier) {
-      return res.status(409).json({ success: false, error: 'This member is already on the selected tier' });
+    if (!canChangeLifecycle(current)) {
+      return res.status(409).json({ success: false, error: 'Only a current, paid membership without a pending cancellation can change tiers' });
     }
-
+    if (getMembershipTierRank(payload.tier) >= getMembershipTierRank(current.membership.tier)) {
+      return res.status(400).json({ success: false, error: 'Choose a tier below the current tier to schedule a downgrade' });
+    }
+    if (current.membership.freeze || current.membership.pendingPlanChange) {
+      return res.status(409).json({ success: false, error: 'Resolve the existing pause or scheduled plan change first' });
+    }
+    const effectiveDate = addCalendarDays(current.membership.endDate, 1);
     const updated = {
       ...current,
       membership: {
         ...current.membership,
-        status: 'active',
-        autoRenew: false,
+        pendingPlanChange: {
+          tier: payload.tier,
+          effectiveDate,
+          requestedAt: new Date().toISOString()
+        },
         pendingDowngradeTier: payload.tier,
-        notes: `${current.name} will switch to ${payload.tier} at the next renewal date.`
+        notes: `${current.name} will switch to ${payload.tier} on ${effectiveDate}. No payment has been collected or scheduled.`
       }
     };
 
-    await membersDb.updateAsync({ id }, updated, {});
+    await saveLifecycleMember(updated);
     return res.json({ success: true, data: updated });
   } catch (error) {
     console.error('Failed to schedule downgrade', error);
     return res.status(500).json({ success: false, error: 'Membership downgrade could not be saved' });
+  }
+});
+
+router.post('/:id/cancel-plan-change', requireAuth, async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    if (!canAccessMember(req, id)) {
+      return res.status(403).json({ success: false, error: 'You are not authorized to manage this member' });
+    }
+    const found = await membersDb.findOneAsync({ id });
+    if (!found) {
+      return res.status(404).json({ success: false, error: `Member ${id} not found` });
+    }
+    const current = getMemberForLifecycle(found);
+    if (!current.membership.pendingPlanChange) {
+      return res.status(409).json({ success: false, error: 'There is no scheduled plan change to cancel' });
+    }
+    const updated = {
+      ...current,
+      membership: {
+        ...current.membership,
+        pendingPlanChange: undefined,
+        pendingDowngradeTier: null,
+        notes: 'Scheduled plan change cancelled.'
+      }
+    };
+    await saveLifecycleMember(updated);
+    return res.json({ success: true, data: updated });
+  } catch (error) {
+    console.error('Failed to cancel scheduled plan change', error);
+    return res.status(500).json({ success: false, error: 'Scheduled plan change could not be cancelled' });
   }
 });
 
@@ -239,35 +362,107 @@ router.post('/:id/cancel', requireAuth, async (req: Request, res: Response) => {
       return res.status(403).json({ success: false, error: 'You are not authorized to manage this member' });
     }
 
-    const current = await membersDb.findOneAsync({ id });
-    if (!current) {
+    const found = await membersDb.findOneAsync({ id });
+    if (!found) {
       return res.status(404).json({ success: false, error: `Member ${id} not found` });
     }
+    const current = getMemberForLifecycle(found);
 
     const payload = readMemberMembershipChange(req.body || {});
-    const effectiveDate = payload.effectiveDate || new Date().toISOString().slice(0, 10);
-    const reason = payload.reason || 'Self-service cancellation';
+    const reason = req.body?.reason;
+    const retentionOffer = req.body?.retentionOffer;
+    const offerTier = readMemberMembershipChange({ tier: req.body?.offerTier }).tier;
+    const today = new Date().toISOString().slice(0, 10);
+    if (!canChangeLifecycle(current) && current.membership.status !== 'frozen') {
+      return res.status(409).json({ success: false, error: 'Only a current membership can be cancelled' });
+    }
+    if (typeof reason !== 'string' || !CANCELLATION_REASONS.has(reason as MembershipCancellationReason)) {
+      return res.status(400).json({ success: false, error: 'Choose a cancellation reason' });
+    }
+    if (!['pause', 'downgrade', 'declined'].includes(retentionOffer)) {
+      return res.status(400).json({ success: false, error: 'Choose a retention offer or decline the offer before cancelling' });
+    }
+    const retentionHistory = [
+      ...(current.membership.retentionHistory || []),
+      {
+        requestedAt: new Date().toISOString(),
+        reason: reason as MembershipCancellationReason,
+        offer: retentionOffer as 'pause' | 'downgrade' | 'declined',
+        accepted: retentionOffer !== 'declined'
+      }
+    ];
 
+    if (retentionOffer === 'pause') {
+      if (current.membership.freeze || current.membership.status !== 'active' || current.membership.endDate < today) {
+        return res.status(409).json({ success: false, error: 'A pause offer is unavailable for this membership' });
+      }
+      const endDate = addCalendarDays(today, 30);
+      for (let year = Number(today.slice(0, 4)); year <= Number(endDate.slice(0, 4)); year += 1) {
+        const usedDays = (current.membership.freezeHistory || []).reduce(
+          (total, window) => total + overlapDaysInYear(window.startDate, window.endDate, year),
+          0
+        );
+        if (usedDays + overlapDaysInYear(today, endDate, year) > FREEZE_MAX_DAYS_PER_YEAR) {
+          return res.status(409).json({ success: false, error: `The annual pause allowance for ${year} has already been used` });
+        }
+      }
+      const updated = {
+        ...current,
+        membership: {
+          ...current.membership,
+          status: 'frozen' as const,
+          freeze: { startDate: today, endDate, reason: 'retention' as const },
+          pendingPlanChange: undefined,
+          pendingDowngradeTier: null,
+          retentionHistory,
+          notes: `Membership pause accepted until ${endDate}. Payment processing is not configured.`
+        }
+      };
+      await saveLifecycleMember(updated);
+      return res.json({ success: true, data: updated });
+    }
+
+    if (retentionOffer === 'downgrade') {
+      if (!offerTier || !canChangeLifecycle(current) ||
+        getMembershipTierRank(offerTier) >= getMembershipTierRank(current.membership.tier) ||
+        current.membership.pendingPlanChange || current.membership.pendingDowngradeTier || current.membership.freeze) {
+        return res.status(409).json({ success: false, error: 'Choose an available lower tier for the retention offer' });
+      }
+      const effectiveDate = addCalendarDays(current.membership.endDate, 1);
+      const updated = {
+        ...current,
+        membership: {
+          ...current.membership,
+          pendingPlanChange: { tier: offerTier, effectiveDate, requestedAt: new Date().toISOString() },
+          pendingDowngradeTier: offerTier,
+          retentionHistory,
+          notes: `Retention downgrade to ${offerTier} scheduled for ${effectiveDate}. No payment has been collected or scheduled.`
+        }
+      };
+      await saveLifecycleMember(updated);
+      return res.json({ success: true, data: updated });
+    }
+
+    const effectiveDate = current.membership.endDate;
     const updated = {
       ...current,
       membership: {
         ...current.membership,
-        status: 'cancelled',
-        paymentStatus: 'pending',
         autoRenew: false,
-        freeze: undefined,
-        pendingDowngradeTier: null,
         cancellation: {
           requestedAt: new Date().toISOString(),
           effectiveDate,
-          reason,
-          status: 'requested'
+          reason: reason as MembershipCancellationReason,
+          status: 'requested' as const
         },
-        notes: `Cancelled effective ${effectiveDate}. Reason: ${reason}`
+        pendingDowngradeTier: null,
+        pendingPlanChange: undefined,
+        retentionHistory,
+        notes: `Cancellation requested for ${effectiveDate}. Access remains available through that date. No refund or future charge was processed.`
       }
     };
 
-    await membersDb.updateAsync({ id }, updated, {});
+    await saveLifecycleMember(updated);
     return res.json({ success: true, data: updated });
   } catch (error) {
     console.error('Failed to cancel membership', error);
@@ -280,21 +475,22 @@ router.get('/', requireAuth, requireRoles('admin', 'staff', 'franchise-owner'), 
   try {
     const { search, tier, status, payment } = req.query;
 
-    const query: Record<string, any> = {};
+    let members: Member[] = await membersDb.findAsync({});
+    members = await Promise.all(members.map(async (member) => {
+      const refreshed = getMemberForLifecycle(member);
+      if (refreshed !== member) await saveLifecycleMember(refreshed);
+      return refreshed;
+    }));
 
-    if (tier && tier !== 'ALL') {
-      query['membership.tier'] = tier as MembershipTier;
+    if (typeof tier === 'string' && tier !== 'ALL') {
+      members = members.filter((member) => member.membership.tier === tier);
     }
-
-    if (status && status !== 'ALL') {
-      query['membership.status'] = status as MembershipStatus;
+    if (typeof status === 'string' && status !== 'ALL') {
+      members = members.filter((member) => member.membership.status === status);
     }
-
-    if (payment && payment !== 'ALL') {
-      query['membership.paymentStatus'] = payment as PaymentStatus;
+    if (typeof payment === 'string' && payment !== 'ALL') {
+      members = members.filter((member) => member.membership.paymentStatus === payment);
     }
-
-    let members = await membersDb.findAsync(query);
 
     // Apply text search filtering if provided
     if (search && typeof search === 'string' && search.trim() !== '') {
@@ -325,11 +521,13 @@ router.get('/:id', requireAuth, async (req: Request, res: Response) => {
     if (!canAccessMember(req, id)) {
       return res.status(403).json({ success: false, error: 'You are not authorized to view this member' });
     }
-    const member = await membersDb.findOneAsync({ id });
+    const found = await membersDb.findOneAsync({ id });
 
-    if (!member) {
+    if (!found) {
       return res.status(404).json({ success: false, error: `Member ${id} not found` });
     }
+    const member = getMemberForLifecycle(found);
+    if (member !== found) await saveLifecycleMember(member);
 
     res.json({ success: true, data: member });
   } catch (err: any) {

@@ -6,6 +6,36 @@ export type MembershipStatus = 'active' | 'pending' | 'expired' | 'suspended' | 
 
 export type PaymentStatus = 'paid' | 'pending' | 'overdue';
 
+export type MembershipFreezeReason = 'travel' | 'medical' | 'military' | 'other' | 'retention';
+
+export type MembershipCancellationReason =
+  | 'price'
+  | 'relocation'
+  | 'injury'
+  | 'dissatisfaction'
+  | 'competitor'
+  | 'other';
+
+export interface MembershipFreezeWindow {
+  startDate: string;
+  endDate: string;
+  reason: MembershipFreezeReason;
+  resumedAt?: string;
+}
+
+export interface MembershipPlanChange {
+  tier: MembershipTier;
+  effectiveDate: string;
+  requestedAt: string;
+}
+
+export interface MembershipRetentionEvent {
+  requestedAt: string;
+  reason: MembershipCancellationReason;
+  offer: 'pause' | 'downgrade' | 'declined';
+  accepted: boolean;
+}
+
 export interface EmergencyContact {
   name: string;
   phone: string;
@@ -30,18 +60,17 @@ export interface MembershipInfo {
   autoRenew: boolean;
   perks: string[];
   notes?: string;
-  freeze?: {
-    startDate: string;
-    endDate: string;
-    reason?: string;
-  };
+  freeze?: MembershipFreezeWindow;
+  freezeHistory?: MembershipFreezeWindow[];
+  pendingPlanChange?: MembershipPlanChange;
   pendingDowngradeTier?: MembershipTier | null;
   cancellation?: {
     requestedAt?: string;
     effectiveDate?: string;
-    reason?: string;
+    reason?: MembershipCancellationReason | string;
     status?: 'requested' | 'completed';
   };
+  retentionHistory?: MembershipRetentionEvent[];
   lastOfflinePaymentConfirmation?: {
     confirmedAt: string;
     confirmedBy: string;

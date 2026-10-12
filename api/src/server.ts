@@ -10,6 +10,7 @@ import seedRouter from './routes/seed.js';
 import enrollmentsRouter from './routes/enrollments.js';
 import authRouter from './routes/auth.js';
 import accessRouter from './routes/access.js';
+import { processMembershipLifecycle } from './membershipLifecycle.js';
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -60,6 +61,13 @@ async function startServer() {
   try {
     console.log('🚀 Initializing Document Database...');
     await initDb();
+    await processMembershipLifecycle();
+    const lifecycleTimer = setInterval(() => {
+      void processMembershipLifecycle().catch((error: unknown) => {
+        console.error('Failed to process scheduled membership lifecycle changes', error);
+      });
+    }, 60_000);
+    lifecycleTimer.unref();
 
     app.listen(PORT, () => {
       console.log(`\n======================================================`);

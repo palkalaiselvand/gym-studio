@@ -4,6 +4,8 @@
 **Domain:** Subscription Tiers, Freeze/Pause, Upgrades/Downgrades, Cancellations, Dunning & Family/Corporate Accounts  
 **Owner:** Senior Product Owner – Billing & Retention  
 
+> **Implementation sequencing:** This PRD defines the full target. The current Phase 2 implementation covers non-payment lifecycle controls only: scheduled access pauses, renewal-date plan changes, end-of-term cancellation, exit reasons, and retention offers. Processor tokenization, charges, proration, automated billing/dunning, wallet synchronization, and family/corporate billing are explicitly deferred to final Phase 7 (see [the implementation roadmap](./07_iterative_implementation_roadmap.md)). No payment information is collected or money moved by Phase 2.
+
 ---
 
 ## 1. Module Overview & Business Value

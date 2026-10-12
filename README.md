@@ -69,6 +69,12 @@ Open `http://localhost:5173` in your browser. The UI will automatically detect a
 | `PATCH` | `/api/members/:id/duplicate-review` | Complete staff review of a possible name/phone duplicate |
 | `POST` | `/api/members/:id/activate` | Activate after a staff member confirms payment was collected outside the app |
 | `POST` | `/api/members/:id/renew` | Renew after staff confirms payment was collected outside the app |
+| `POST` | `/api/members/:id/freeze` | Schedule a 14–90 day access pause (maximum 90 days per calendar year) |
+| `POST` | `/api/members/:id/resume` | End or cancel an active/scheduled access pause |
+| `POST` | `/api/members/:id/upgrade` | Schedule an upgrade for the next membership term |
+| `POST` | `/api/members/:id/downgrade` | Schedule a downgrade for the next membership term |
+| `POST` | `/api/members/:id/cancel-plan-change` | Cancel a scheduled tier change before it takes effect |
+| `POST` | `/api/members/:id/cancel` | Record an end-of-term cancellation, exit reason, or retention-offer outcome |
 | `POST` | `/api/members/:id/check-in` | Staff/admin recorded check-in for an active, paid member |
 | `GET` | `/api/studio` | Studio details, amenities, hours, trainers & announcements |
 | `PUT` | `/api/studio` | Update studio details (admin) |
@@ -86,7 +92,11 @@ Use **Join the studio** in the UI to select a plan, submit contact details, comp
 
 Authentication uses the local database: passwords are scrypt-hashed, opaque sessions are stored by token hash, cookies are HttpOnly/SameSite, and authenticated mutations require a session CSRF token. Public enrollment creates a member account; the initial administrator is bootstrapped from `ADMIN_EMAIL` and `ADMIN_PASSWORD`. Configure `UI_ORIGINS` for the browser origins you use.
 
-Enrollment creates a pending member and account. Payment processing is intentionally deferred: no card/bank data is collected and no processor is integrated. Staff/admin can record an explicit confirmation that payment was collected outside the app before activating or renewing a member. Only active, paid, unexpired accounts can book classes or receive a rotating, signed, one-use in-app QR token; staff/admin access readers can validate it through `/api/access/verify`. This is not an Apple/Google Wallet pass and no physical scanner integration is included.
+Enrollment creates a pending member and account. Payment processing is intentionally deferred to final Phase 7: no card/bank data is collected and no processor is integrated. Staff/admin can record an explicit confirmation that payment was collected outside the app before activating or renewing a member. Only active, paid, unexpired accounts can book classes or receive a rotating, signed, one-use in-app QR token; staff/admin access readers can validate it through `/api/access/verify`. This is not an Apple/Google Wallet pass and no physical scanner integration is included.
+
+### Phase 2 membership lifecycle
+
+Members can schedule and end access pauses, schedule a tier change for after the current membership term, and request cancellation effective after the recorded end date while retaining access through that date. A pause reminder appears in the app during the three days before scheduled access resumes. Cancellation requests capture an exit reason and offer a pause or lower tier; accepted/declined retention outcomes feed the admin dashboard. Lifecycle state changes are reconciled automatically by the API. These features do not suspend or collect charges, calculate proration, issue refunds, or synchronize external wallet passes. Processor-backed billing, payment dunning, wallet synchronization, POS/network settlement, and family/corporate billing are deferred to Phase 7; see [the roadmap](product%20requirement/07_iterative_implementation_roadmap.md).
 
 Possible duplicate screening compares normalized name and phone and queues a staff review; it is not identity verification. No government ID, selfie, or liveness data is collected. SMS welcome nudges, orientation automation, provider-based wallet issuance, payment, and legal review of the sample waiver still require external services or operational setup. This remains a development prototype, not a production-ready deployment.
 

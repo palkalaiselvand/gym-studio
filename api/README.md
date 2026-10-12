@@ -18,6 +18,15 @@ An administrator can manage staff/franchise-owner credentials through `/api/auth
 
 The enrollment route stores only the health-screening result/clearance flag, not individual PAR-Q answers or date of birth. A possible duplicate based on normalized name/phone requires staff review; this is not government-ID or liveness verification. Enrollments create members with `pending` status. Payment processing is not integrated and payment details are neither requested nor stored. Staff/admin may activate or renew only after explicitly confirming payment was collected outside the application; the app records the confirming user and time.
 
+## Membership lifecycle (Phase 2 non-payment scope)
+
+- Members may schedule a pause with a valid start date and resume date at least 14 days apart, up to 90 pause days per calendar year. Access is blocked only during the pause interval; the API reconciles scheduled starts and resumes at startup, on member reads, and every minute. Members see an in-app reminder during the three days before resume.
+- Upgrade and downgrade requests are stored for the day after the current membership end date. They do not change current access or price early, and can be cancelled before their effective date.
+- Cancellation requires an exit reason and takes effect after the recorded membership end date, preserving access through that date. The API records accepted pause/downgrade offers or declined offers as retention outcomes.
+- Existing memberships without a recorded contract term use their stored end date as the cancellation effective date.
+
+These are lifecycle and access records only. The app does not collect payment data, calculate proration, pause charges, issue refunds, or run payment dunning. Recurring billing, processor integrations, payment reconciliation, wallet synchronization, family/corporate billing, and transaction settlement are deferred to final Phase 7. See the [roadmap](../product%20requirement/07_iterative_implementation_roadmap.md).
+
 ## Class bookings and QR access
 
 Members can list, reserve, and cancel their own class bookings. Booking requires an active, paid membership and enforces physician-clearance restrictions for high-intensity classes. Available spots and reservation records are persisted.
