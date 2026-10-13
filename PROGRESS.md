@@ -6,7 +6,7 @@ Roadmap source: [product requirement/07_iterative_implementation_roadmap.md](./p
 
 Stack: React/TS SPA (`ui/`), Express/TS API (`api/`), NeDB storage. Build with `npm run build:api` and `npm run build:ui`. Lint with `npm run lint --prefix ui`. There is no test runner; use isolated API smoke tests (temp `DATA_DIR`, `PORT=5150`, `ADMIN_EMAIL`, `ADMIN_PASSWORD`).
 
-Last updated: 2026-10-13 (Phase 5 network-and-perks is complete; Phase 6 productization has started with licensing and deployment-config readiness; payment work remains deferred to final phase)
+Last updated: 2026-10-12 (Phase 5 complete; Phase 6 self-hosting and operational foundations added, with productization exit criteria still outstanding)
 
 ## Decisions made
 
@@ -27,7 +27,7 @@ Last updated: 2026-10-13 (Phase 5 network-and-perks is complete; Phase 6 product
 | 3 | Studio offerings, scheduling and retail | Done: waitlist enrollment, capacity promotion, and class scheduling affordances shipped |
 | 4 | Facility maintenance and IoT | Done: asset registry and maintenance ticket workflow shipped in the operating dashboard |
 | 5 | Cross-gym network and perks | Done: partner-network, loyalty passport, and merchant-perk marketplace surfaced in the studio detail experience |
-| 6 | Productization and customer-deployed readiness | In progress: licensing, entitlement evaluation, and admin-managed deployment config are in place |
+| 6 | Productization and customer-deployed readiness | In progress: Compose install, signed offline license import/enforcement, backup/restore and update helpers, export, and diagnostics added; external deployment validation and several productization epics remain |
 | 7 | Payment processing and automated billing (final phase) | Deferred: provider selection, credentials, and PCI/compliance readiness are not yet defined |
 
 ## Done
@@ -37,17 +37,28 @@ Last updated: 2026-10-13 (Phase 5 network-and-perks is complete; Phase 6 product
 - Phase 3 (initial rollout): class waitlist registration, automatic waitlist promotion on cancellations, and UI affordances for full-class enrollment.
 - Phase 4 (initial rollout): facility asset registry, maintenance ticket triage, and operations dashboard summary for asset health and outage tracking.
 - Phase 5 (initial rollout): cross-gym partner network, loyalty passport data, and local merchant-perk marketplace surfaced in the studio detail experience.
-- Phase 6 (initial rollout): license/entitlement model with SKU limits, grace-period handling, customer-configurable branding and deployment-ready metadata, and admin UI support for updating the active deployment license.
+- Phase 6 (initial rollout): single-host Docker Compose API/UI images with a prompted first-run installer and initial-admin bootstrap; Ed25519 offline-signed license generation/import and local signature verification; expired/unlicensed admin write restrictions with explicit access/check-in/facility/renewal exceptions; admin license status banner; hash-verified NeDB backup/restore and semantic-version image rebuild/rollback helpers; admin data export and sanitized runtime diagnostics; and a deployment runbook documenting limits and setup.
 - Branding: public `GET /api/branding`, admin-only validated `PUT /api/branding`, Branding panel on the admin dashboard, UI-wide name/logo/color/currency formatting, currency-aware contract text.
 
 ## Known gaps and next steps
 
-1. Phase 7 payment work: processor selection and tokenization, recurring charges, proration, smart payment dunning/retries, payment reconciliation, wallet-pass synchronization, and payment/settlement-dependent retail, network, family, and corporate workflows.
-2. Apple/Google Wallet pass issuance remains unimplemented; current access pass is in-app QR only. Freeze reminders are in-app only; email/SMS delivery is not configured.
-3. SMS/orientation automation, government-ID/selfie KYC, and legal review of the waiver.
-4. Branding follow-ups: seed/studio data still says "Apex" (`database/seeds/studio.json`, `ui/src/data/mockData.ts`); no light theme or font choice; currency changes formatting only and does not convert prices.
+1. Phase 6 license SKU feature flags and studio/member capacity limits are not enforced throughout all API entry points; mail/SMS/domain metadata is not wired to DNS or a delivery provider.
+2. Phase 6 still lacks Helm, Terraform, air-gapped image distribution, release registry/provenance and LTS policy, scheduled off-host backup, diagnostics log bundling, and formal support SLAs. The update helper rebuilds a checked-out source tree rather than consuming vendor-signed release artifacts.
+3. Phase 6 exit criteria remain open: Docker build/Compose clean-room validation, independent customer installation within two business days, independent rollback drill, sales-trial sign-off, and production sizing/DR exercises. Docker is unavailable in the current implementation environment; the Compose images were not built here.
+4. Phase 7 payment work: processor selection and tokenization, recurring charges, proration, smart payment dunning/retries, payment reconciliation, wallet-pass synchronization, and payment/settlement-dependent retail, network, family, and corporate workflows.
+5. Apple/Google Wallet pass issuance remains unimplemented; current access pass is in-app QR only. Freeze reminders are in-app only; email/SMS delivery is not configured. SMS/orientation automation, government-ID/selfie KYC, and legal review of the waiver also remain open.
+6. Branding follow-ups: seed/studio data still says "Apex" (`database/seeds/studio.json`, `ui/src/data/mockData.ts`); no light theme or font choice; currency changes formatting only and does not convert prices.
 
 ## Housekeeping
 
 - Login throttling is in-memory and IP-based.
 - `/api/seed/reset` re-seeds demo data and clears member accounts, bookings, enrollments and access passes. Branding is kept.
+
+## Verification (2026-10-12)
+
+- `npm run build` passed for API and UI.
+- `npm run lint --prefix ui` passed with existing purity/state-in-effect warnings; no lint errors.
+- Ed25519 CLI key generation/signing and escaped-newline public-key verification passed; invalid/tampered signatures were rejected.
+- Isolated production API smoke passed: unlicensed/expired admin writes are denied; license import/renewal, check-in, access verification, export, and diagnostics remain available.
+- Isolated backup/restore round-trip passed; corrupted snapshots were rejected before replacing active data.
+- Development UI and API health endpoints responded with HTTP 200. Docker is not installed in the implementation environment, so Compose/Docker image builds were not run.

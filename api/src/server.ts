@@ -12,6 +12,7 @@ import enrollmentsRouter from './routes/enrollments.js';
 import authRouter from './routes/auth.js';
 import accessRouter from './routes/access.js';
 import facilityRouter from './routes/facility.js';
+import supportRouter from './routes/support.js';
 import { processMembershipLifecycle } from './membershipLifecycle.js';
 
 const app = express();
@@ -39,7 +40,7 @@ app.get('/api/health', (_req, res) => {
     status: 'online',
     timestamp: new Date().toISOString(),
     service: 'Gym Studio Management API',
-    database: 'Open-Source Document DB (NeDB/MongoDB)'
+    database: 'NeDB document database'
   });
 });
 
@@ -54,6 +55,7 @@ app.use('/api/enrollments', enrollmentsRouter);
 app.use('/api/auth', authRouter);
 app.use('/api/access', accessRouter);
 app.use('/api/facility', facilityRouter);
+app.use('/api/support', supportRouter);
 
 // 404 Handler
 app.use((_req, res) => {

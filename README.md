@@ -5,7 +5,7 @@ Full-stack gym management platform with a React + TypeScript SPA, RESTful API, a
 ```
 ├── ui/              # React + TypeScript SPA (Vite, Lucide icons, glassmorphism theme)
 ├── api/             # Express + TypeScript backend REST API
-└── database/        # Open-source document database (NeDB / MongoDB) & seeds
+└── database/        # NeDB runtime data and seed documents
     ├── data/        # Persistent database files (members.db, studio.db, classes.db)
     └── seeds/       # Initial seed documents (members.json, studio.json)
 ```
@@ -40,9 +40,16 @@ Open `http://localhost:5173` in your browser. The UI will automatically detect a
 
 ---
 
+## Customer Deployment (Phase 6 Reference)
+
+A self-hosted Docker Compose reference, first-run installer, offline signed-license workflow, manual backup/restore helpers, update/rollback helper, customer data export, and support diagnostics are documented in [docs/phase6-customer-deployment.md](docs/phase6-customer-deployment.md). To run the installer, use `node deployment/install.mjs`.
+
+This is not yet a production-ready or fully productized release: cloud templates, Helm, air-gapped delivery, a release registry, complete license-cap enforcement, scheduled off-host backups, and independent clean-room/rollback validation remain outstanding.
+
+---
+
 ## 🗄️ Database Architecture
 - **Engine**: Open-Source Document Database (`@seald-io/nedb`) providing full MongoDB-compatible document storage without requiring Docker or an external daemon installed.
-- **Optional MongoDB / Atlas Support**: Simply set `MONGODB_URI` in `api/.env` to point to any remote MongoDB cluster or local MongoDB instance.
 - **Storage**: Persistent collection files stored in `database/data/` (`members.db`, `studio.db`, `classes.db`, `enrollments.db`).
 - **Initial Seeds**: Tracked in `database/seeds/` (`members.json`, `studio.json`).
 

@@ -1,31 +1,57 @@
 import React, { useEffect, useState } from 'react';
-import { ArrowLeft, ImageOff, Palette, Save, Upload } from 'lucide-react';
+import { ArrowLeft, Download, ImageOff, Palette, Save, Upload } from 'lucide-react';
 import { apiService } from '../../services/apiService';
 import { COUNTRIES, applyBranding, formatMoney, useBranding } from '../../branding/branding';
-import type { Branding, LicenseConfig } from '../../types';
+import type { Branding, LicenseConfig, SignedLicenseFile } from '../../types';
 
 interface BrandingPanelProps {
   onBack: () => void;
+  onLicenseUpdated: (license: LicenseConfig) => void;
 }
 
 const MAX_LOGO_BYTES = 130 * 1024;
+const MAX_LICENSE_BYTES = 64 * 1024;
 
-export const BrandingPanel: React.FC<BrandingPanelProps> = ({ onBack }) => {
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
+
+function isSignedLicenseFile(value: unknown): value is SignedLicenseFile {
+  if (!isRecord(value) || !isRecord(value.payload) || typeof value.signature !== 'string') return false;
+  const payload = value.payload;
+  return typeof payload.licenseId === 'string' &&
+    typeof payload.customerName === 'string' &&
+    (payload.sku === 'STARTER' || payload.sku === 'GROWTH' || payload.sku === 'ENTERPRISE') &&
+    typeof payload.issuedAt === 'string' &&
+    typeof payload.expiresAt === 'string' &&
+    typeof payload.gracePeriodDays === 'number' &&
+    typeof payload.maxStudios === 'number' &&
+    typeof payload.maxMembers === 'number' &&
+    Array.isArray(payload.features) &&
+    payload.features.every((feature) => typeof feature === 'string') &&
+    (typeof payload.customDomain === 'string' || payload.customDomain === null) &&
+    (typeof payload.emailFrom === 'string' || payload.emailFrom === null);
+}
+
+export const BrandingPanel: React.FC<BrandingPanelProps> = ({ onBack, onLicenseUpdated }) => {
   const { branding, setBranding } = useBranding();
   const [draft, setDraft] = useState<Branding>(branding);
   const [licenseDraft, setLicenseDraft] = useState<LicenseConfig | null>(null);
   const [error, setError] = useState('');
   const [saved, setSaved] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
-  const [isSavingLicense, setIsSavingLicense] = useState(false);
+  const [licenseError, setLicenseError] = useState('');
+  const [isImportingLicense, setIsImportingLicense] = useState(false);
+  const [isDownloading, setIsDownloading] = useState(false);
 
   useEffect(() => {
     void (async () => {
       try {
         const nextLicense = await apiService.getLicense();
         setLicenseDraft(nextLicense);
-      } catch {
+      } catch (loadError) {
         setLicenseDraft(null);
+        setLicenseError(loadError instanceof Error ? loadError.message : 'License status could not be loaded.');
       }
     })();
   }, []);
@@ -76,18 +102,49 @@ export const BrandingPanel: React.FC<BrandingPanelProps> = ({ onBack }) => {
     }
   };
 
-  const saveLicense = async () => {
-    if (!licenseDraft) return;
-    setIsSavingLicense(true);
+  const importLicense = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    event.target.value = '';
+    if (!file) return;
+    if (file.size > MAX_LICENSE_BYTES) {
+      setLicenseError('License file must be 64 KB or smaller.');
+      return;
+    }
+
+    setIsImportingLicense(true);
     try {
-      const updated = await apiService.updateLicense(licenseDraft);
+      const parsed: unknown = JSON.parse(await file.text());
+      if (!isSignedLicenseFile(parsed)) throw new Error('The selected file is not a signed license document.');
+      const updated = await apiService.importLicense(parsed);
       setLicenseDraft(updated);
-      setError('');
+      onLicenseUpdated(updated);
+      setLicenseError('');
       setSaved(true);
-    } catch (saveError) {
-      setError(saveError instanceof Error ? saveError.message : 'License settings could not be saved.');
+    } catch (importError) {
+      setLicenseError(importError instanceof Error ? importError.message : 'Signed license could not be imported.');
     } finally {
-      setIsSavingLicense(false);
+      setIsImportingLicense(false);
+    }
+  };
+
+  const downloadAdminFile = async (kind: 'export' | 'diagnostics') => {
+    setIsDownloading(true);
+    try {
+      const blob = kind === 'export'
+        ? await apiService.downloadCustomerExport()
+        : await apiService.downloadSupportDiagnostics();
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = kind === 'export' ? 'gym-studio-data-export.json' : 'gym-studio-support-diagnostics.json';
+      document.body.append(link);
+      link.click();
+      link.remove();
+      window.setTimeout(() => URL.revokeObjectURL(url), 1000);
+    } catch (downloadError) {
+      setError(downloadError instanceof Error ? downloadError.message : 'Admin download could not be generated.');
+    } finally {
+      setIsDownloading(false);
     }
   };
 
@@ -107,7 +164,7 @@ export const BrandingPanel: React.FC<BrandingPanelProps> = ({ onBack }) => {
       </div>
 
       {error && <div className="enrollment-error" role="alert">{error}</div>}
-      {saved && <div role="status" style={{ color: 'var(--accent-primary)', marginBottom: '0.75rem', fontWeight: 600 }}>Branding saved.</div>}
+      {saved && <div role="status" style={{ color: 'var(--accent-primary)', marginBottom: '0.75rem', fontWeight: 600 }}>Configuration saved.</div>}
 
       <form onSubmit={save} className="login-form" style={{ maxWidth: '720px' }}>
         <div className="form-row">
@@ -153,82 +210,32 @@ export const BrandingPanel: React.FC<BrandingPanelProps> = ({ onBack }) => {
         <button className="btn-primary" type="submit" disabled={isSaving}><Save size={16} /><span>Save branding</span></button>
       </form>
 
-      {licenseDraft && (
-        <div style={{ borderTop: '1px solid var(--border-subtle)', marginTop: '1.5rem', paddingTop: '1.5rem', maxWidth: '720px' }}>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '1rem', marginBottom: '1rem' }}>
-            <div>
-              <h3 style={{ marginBottom: '0.25rem' }}>License &amp; entitlement</h3>
-              <p className="enrollment-muted">Customer deployment settings for supported tiers, feature access, and license expiry.</p>
-            </div>
-            <button type="button" className="btn-secondary-sm" onClick={saveLicense} disabled={isSavingLicense}>
-              <Save size={14} /> {isSavingLicense ? 'Saving...' : 'Save license'}
-            </button>
+      <div style={{ borderTop: '1px solid var(--border-subtle)', marginTop: '1.5rem', paddingTop: '1.5rem', maxWidth: '720px' }}>
+        <h3 style={{ marginBottom: '0.25rem' }}>License &amp; customer support</h3>
+        <p className="enrollment-muted">Entitlements are verified offline using the vendor public key. Member access and safety-critical operations remain available if a license expires.</p>
+        {licenseDraft ? (
+          <div role="status" style={{ margin: '1rem 0' }}>
+            <strong>{licenseDraft.status.replace('-', ' ').toUpperCase()}</strong>
+            {' · '}{licenseDraft.sku}{' · '}{licenseDraft.customerName}
+            {licenseDraft.expiresAt && ` · Expires ${new Date(licenseDraft.expiresAt).toLocaleDateString()}`}
           </div>
-
-          <div className="form-row">
-            <label className="form-group">
-              <span className="form-label">SKU</span>
-              <select className="form-select" value={licenseDraft.sku} onChange={(event) => setLicenseDraft({ ...licenseDraft, sku: event.target.value as LicenseConfig['sku'] })}>
-                <option value="STARTER">STARTER</option>
-                <option value="GROWTH">GROWTH</option>
-                <option value="ENTERPRISE">ENTERPRISE</option>
-              </select>
-            </label>
-            <label className="form-group">
-              <span className="form-label">Status</span>
-              <select className="form-select" value={licenseDraft.status} onChange={(event) => setLicenseDraft({ ...licenseDraft, status: event.target.value as LicenseConfig['status'] })}>
-                <option value="active">Active</option>
-                <option value="trial">Trial</option>
-                <option value="grace-period">Grace period</option>
-                <option value="expired">Expired</option>
-              </select>
-            </label>
-          </div>
-
-          <div className="form-row">
-            <label className="form-group">
-              <span className="form-label">Customer name</span>
-              <input className="form-input" value={licenseDraft.customerName} onChange={(event) => setLicenseDraft({ ...licenseDraft, customerName: event.target.value })} />
-            </label>
-            <label className="form-group">
-              <span className="form-label">Custom domain</span>
-              <input className="form-input" value={licenseDraft.customDomain ?? ''} onChange={(event) => setLicenseDraft({ ...licenseDraft, customDomain: event.target.value || null })} placeholder="example.com" />
-            </label>
-          </div>
-
-          <div className="form-row">
-            <label className="form-group">
-              <span className="form-label">Expires at</span>
-              <input className="form-input" type="datetime-local" value={licenseDraft.expiresAt ? new Date(licenseDraft.expiresAt).toISOString().slice(0, 16) : ''} onChange={(event) => setLicenseDraft({ ...licenseDraft, expiresAt: event.target.value ? new Date(event.target.value).toISOString() : null })} />
-            </label>
-            <label className="form-group">
-              <span className="form-label">Grace period (days)</span>
-              <input className="form-input" type="number" min={0} max={30} value={licenseDraft.gracePeriodDays} onChange={(event) => setLicenseDraft({ ...licenseDraft, gracePeriodDays: Number(event.target.value) || 0 })} />
-            </label>
-          </div>
-
-          <div className="form-row">
-            <label className="form-group">
-              <span className="form-label">Max studios</span>
-              <input className="form-input" type="number" min={1} value={licenseDraft.maxStudios} onChange={(event) => setLicenseDraft({ ...licenseDraft, maxStudios: Number(event.target.value) || 1 })} />
-            </label>
-            <label className="form-group">
-              <span className="form-label">Max members</span>
-              <input className="form-input" type="number" min={1} value={licenseDraft.maxMembers} onChange={(event) => setLicenseDraft({ ...licenseDraft, maxMembers: Number(event.target.value) || 1 })} />
-            </label>
-          </div>
-
-          <div className="form-group">
-            <span className="form-label">Feature list</span>
-            <textarea
-              className="form-input"
-              rows={4}
-              value={licenseDraft.features.join(', ')}
-              onChange={(event) => setLicenseDraft({ ...licenseDraft, features: event.target.value.split(',').map((feature) => feature.trim()).filter(Boolean) })}
-            />
-          </div>
+        ) : (
+          <div className="enrollment-muted" role="status">License status unavailable.</div>
+        )}
+        {licenseError && <div className="enrollment-error" role="alert">{licenseError}</div>}
+        <label className="btn-secondary-sm" style={{ cursor: 'pointer', display: 'inline-flex', margin: '0.5rem 0 1rem' }}>
+          <Upload size={14} /> {isImportingLicense ? 'Verifying...' : 'Import signed license'}
+          <input type="file" accept="application/json,.json" onChange={importLicense} disabled={isImportingLicense} style={{ display: 'none' }} />
+        </label>
+        <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap' }}>
+          <button type="button" className="btn-secondary-sm" onClick={() => void downloadAdminFile('diagnostics')} disabled={isDownloading}>
+            <Download size={14} /> Download support diagnostics
+          </button>
+          <button type="button" className="btn-secondary-sm" onClick={() => void downloadAdminFile('export')} disabled={isDownloading}>
+            <Download size={14} /> Export customer data
+          </button>
         </div>
-      )}
+      </div>
     </section>
   );
 };

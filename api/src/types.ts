@@ -209,8 +209,9 @@ export type LicenseSku = 'STARTER' | 'GROWTH' | 'ENTERPRISE';
 export type LicenseState = 'active' | 'trial' | 'grace-period' | 'expired';
 
 export interface LicenseConfig {
+  licenseId: string;
   sku: LicenseSku;
-  status: LicenseState;
+  status: LicenseState | 'unlicensed';
   issuedAt: string;
   expiresAt: string | null;
   gracePeriodDays: number;

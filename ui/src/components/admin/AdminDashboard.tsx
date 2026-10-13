@@ -10,7 +10,7 @@ import {
   Users,
   Palette
 } from 'lucide-react';
-import type { FacilityAsset, MaintenanceTicket, Member, MembershipStatus } from '../../types';
+import type { FacilityAsset, LicenseConfig, MaintenanceTicket, Member, MembershipStatus } from '../../types';
 import { apiService } from '../../services/apiService';
 import { StatsOverview } from './StatsOverview';
 import { MemberModal } from './MemberModal';
@@ -68,6 +68,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
   const [isBrandingOpen, setIsBrandingOpen] = useState(false);
   const [facilityAssets, setFacilityAssets] = useState<FacilityAsset[]>([]);
   const [maintenanceTickets, setMaintenanceTickets] = useState<MaintenanceTicket[]>([]);
+  const [license, setLicense] = useState<LicenseConfig | null>(null);
 
   useEffect(() => {
     void (async () => {
@@ -81,6 +82,26 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
       }
     })();
   }, []);
+
+  useEffect(() => {
+    if (!canManageTeam) return;
+    let active = true;
+    const refreshLicense = () => {
+      void apiService.getLicense()
+        .then((currentLicense) => {
+          if (active) setLicense(currentLicense);
+        })
+        .catch((error: unknown) => {
+          console.error('Deployment license status could not be loaded', error);
+        });
+    };
+    refreshLicense();
+    const timer = window.setInterval(refreshLicense, 60_000);
+    return () => {
+      active = false;
+      window.clearInterval(timer);
+    };
+  }, [canManageTeam]);
 
   // Filtered members calculation
   const filteredMembers = useMemo(() => {
@@ -184,6 +205,30 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
 
   return (
     <div>
+      {canManageTeam && license && (license.status === 'expired' || license.status === 'unlicensed' || license.status === 'grace-period') && (
+        <div
+          role={license.status === 'expired' || license.status === 'unlicensed' ? 'alert' : 'status'}
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '0.75rem',
+            padding: '0.9rem 1rem',
+            marginBottom: '1rem',
+            border: '1px solid var(--border-subtle)',
+            borderRadius: '0.75rem',
+            color: 'var(--text-primary)',
+            background: 'var(--surface-secondary)'
+          }}
+        >
+          <AlertTriangle size={18} />
+          <span style={{ flex: 1 }}>
+            {license.status === 'grace-period'
+              ? 'License grace period is active; renewal is due soon.'
+              : 'License renewal required. Administrative changes are restricted; member access and safety-critical operations remain available.'}
+          </span>
+          <button className="btn-secondary-sm" onClick={() => setIsBrandingOpen(true)}>Manage license</button>
+        </div>
+      )}
       {/* Top Banner / Heading */}
       <div style={{ marginBottom: '1.5rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '1rem' }}>
         <div>
@@ -212,7 +257,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
       </div>
 
       {isTeamAccessOpen && canManageTeam && <TeamAccessPanel onBack={() => setIsTeamAccessOpen(false)} />}
-      {isBrandingOpen && canManageTeam && <BrandingPanel onBack={() => setIsBrandingOpen(false)} />}
+      {isBrandingOpen && canManageTeam && <BrandingPanel onBack={() => setIsBrandingOpen(false)} onLicenseUpdated={setLicense} />}
 
       {/* Metrics Row */}
       <StatsOverview members={members} />

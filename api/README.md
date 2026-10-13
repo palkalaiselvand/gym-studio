@@ -35,6 +35,16 @@ Members can list, reserve, and cancel their own class bookings. Booking requires
 
 The sample waiver requires legal review. SMS onboarding, orientation scheduling, native wallet providers, and payment require external services and are not configured. Use the root README for prototype limitations and local setup.
 
+## License and support operations (Phase 6)
+
+`GET /api/license` reports the local deployment license state. In production, configure `LICENSE_PUBLIC_KEY` with the vendor's Ed25519 public key and import a signed file through `POST /api/license/import` as an admin. The API validates and stores the envelope locally; license checks do not contact a vendor service. Unsigned `PUT /api/license` is limited to non-production demo use.
+
+Once a signed license is expired or a production deployment is unlicensed, authenticated admin write operations are denied except license renewal, sign-out, access verification, member check-in, and facility maintenance/reporting. Member access and self-service are not license-gated. Missing or invalid verification configuration fails closed for admin writes.
+
+Admin-only `GET /api/support/export` downloads customer data without password hashes, sessions, access-pass tokens, or signing material. `GET /api/support/diagnostics` returns aggregate runtime and datastore diagnostics; logs remain in the container runtime. Both endpoints contain operational/customer information and require admin authentication.
+
+The first-party Docker Compose installer, license signer/key generator, backup/restore and update/rollback operations are described in [the customer deployment runbook](../docs/phase6-customer-deployment.md). The current license SKU flags/caps are not enforced across every feature, and the deployment guide lists packaging and acceptance-test gaps that remain before Phase 6 can be considered complete.
+
 ## Development
 
 From the repository root, run `npm run dev:api` or `npm run build:api`.

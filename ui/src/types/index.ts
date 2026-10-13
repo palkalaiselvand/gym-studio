@@ -278,9 +278,10 @@ export interface LoyaltySummary {
 }
 
 export type LicenseSku = 'STARTER' | 'GROWTH' | 'ENTERPRISE';
-export type LicenseState = 'active' | 'trial' | 'grace-period' | 'expired';
+export type LicenseState = 'active' | 'trial' | 'grace-period' | 'expired' | 'unlicensed';
 
 export interface LicenseConfig {
+  licenseId: string;
   sku: LicenseSku;
   status: LicenseState;
   issuedAt: string;
@@ -292,6 +293,11 @@ export interface LicenseConfig {
   features: string[];
   customDomain: string | null;
   emailFrom: string | null;
+}
+
+export interface SignedLicenseFile {
+  payload: Omit<LicenseConfig, 'status'> & { expiresAt: string };
+  signature: string;
 }
 
 export type FacilityAssetCategory = 'Cardio' | 'Strength' | 'Recovery' | 'Infrastructure' | 'Access Control';

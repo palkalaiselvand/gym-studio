@@ -10,6 +10,10 @@ dist/
 .env
 .env.local
 api/.env
+deployment/.env
+deployment/backups/
+deployment/*.pem
+deployment/*license*.json
 
 # Document Database dynamic runtime files (seeds in database/seeds/ are tracked)
 database/data/*.db

@@ -12,12 +12,13 @@ import type {
   MembershipFreezeReason,
   StaffAccount,
   StudioDetails,
-  LicenseConfig
+  LicenseConfig,
+  SignedLicenseFile
 } from '../types';
 import { storageService } from './storageService';
 import { TIER_CONFIG } from '../data/mockData';
 
-const API_BASE_URL = (import.meta as any).env?.VITE_API_URL || 'http://localhost:5000/api';
+const API_BASE_URL = import.meta.env.VITE_API_URL || (import.meta.env.DEV ? 'http://localhost:5000/api' : '/api');
 
 const enrollmentPlanFallback: EnrollmentPlan[] = Object.values(TIER_CONFIG).map((plan) => ({
   id: plan.name as EnrollmentPlan['id'],
@@ -364,38 +365,40 @@ export const apiService = {
   },
 
   async getLicense(): Promise<LicenseConfig> {
-    try {
-      const response = await apiFetch('/license', { signal: AbortSignal.timeout(3000) });
-      const data = await readResponse<LicenseConfig>(response);
-      this.isApiOnline = true;
-      return data;
-    } catch (error) {
-      console.warn('Using demo license state because the API is unavailable', error);
-      return {
-        sku: 'STARTER',
-        status: 'active',
-        issuedAt: new Date().toISOString(),
-        expiresAt: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString(),
-        gracePeriodDays: 7,
-        maxStudios: 1,
-        maxMembers: 500,
-        customerName: 'Demo Studio',
-        features: ['member-directory', 'class-booking', 'facility-ops', 'brand-customization'],
-        customDomain: null,
-        emailFrom: 'hello@apexstudio.fit'
-      };
-    }
+    const response = await apiFetch('/license', { signal: AbortSignal.timeout(3000) });
+    const data = await readResponse<LicenseConfig>(response);
+    this.isApiOnline = true;
+    return data;
   },
 
-  async updateLicense(license: LicenseConfig): Promise<LicenseConfig> {
-    const response = await apiFetch('/license', {
-      method: 'PUT',
+  async importLicense(file: SignedLicenseFile): Promise<LicenseConfig> {
+    const response = await apiFetch('/license/import', {
+      method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(license)
+      body: JSON.stringify(file),
+      signal: AbortSignal.timeout(5000)
     });
     const data = await readResponse<LicenseConfig>(response);
     this.isApiOnline = true;
     return data;
+  },
+
+  async downloadCustomerExport(): Promise<Blob> {
+    return this.downloadAdminFile('/support/export');
+  },
+
+  async downloadSupportDiagnostics(): Promise<Blob> {
+    return this.downloadAdminFile('/support/diagnostics');
+  },
+
+  async downloadAdminFile(path: string): Promise<Blob> {
+    const response = await apiFetch(path, { signal: AbortSignal.timeout(10000) });
+    if (!response.ok) {
+      const json = await response.json().catch(() => null);
+      throw new Error(json?.error || `Request failed (${response.status})`);
+    }
+    this.isApiOnline = true;
+    return response.blob();
   },
 
   async getEnrollmentPlans(): Promise<EnrollmentPlan[]> {

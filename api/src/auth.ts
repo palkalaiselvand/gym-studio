@@ -6,6 +6,7 @@ import {
 } from 'node:crypto';
 import type { NextFunction, Request, Response } from 'express';
 import { sessionsDb, usersDb } from './db.js';
+import { getLicense, type LicenseConfig } from './license.js';
 
 function deriveKey(password: string, salt: Buffer, keyLength: number): Promise<Buffer> {
   return new Promise((resolve, reject) => {
@@ -113,6 +114,15 @@ function getSessionToken(req: Request): string | undefined {
   return cookie?.slice(SESSION_COOKIE.length + 1);
 }
 
+function canRunWithoutActiveLicense(path: string): boolean {
+  return path === '/api/license' ||
+    path === '/api/license/import' ||
+    path === '/api/auth/logout' ||
+    path === '/api/access/verify' ||
+    /^\/api\/members\/[^/]+\/check-in$/.test(path) ||
+    path.startsWith('/api/facility/');
+}
+
 export async function requireAuth(req: Request, res: Response, next: NextFunction): Promise<void> {
   try {
     const token = getSessionToken(req);
@@ -149,6 +159,32 @@ export async function requireAuth(req: Request, res: Response, next: NextFunctio
       if (!csrfToken || csrfToken.length !== session.csrfToken.length ||
         !timingSafeEqual(Buffer.from(csrfToken), Buffer.from(session.csrfToken))) {
         res.status(403).json({ success: false, error: 'CSRF validation failed' });
+        return;
+      }
+    }
+
+    const path = req.originalUrl.split('?')[0];
+    if (
+      req.authUser.role === 'admin' &&
+      !['GET', 'HEAD', 'OPTIONS'].includes(req.method) &&
+      !canRunWithoutActiveLicense(path)
+    ) {
+      let license: LicenseConfig;
+      try {
+        license = await getLicense();
+      } catch (error: unknown) {
+        console.error('Unable to verify deployment license before administrative action', error);
+        res.status(503).json({
+          success: false,
+          error: 'The deployment license could not be verified; retry after the license configuration is checked.'
+        });
+        return;
+      }
+      if (license.status === 'expired' || license.status === 'unlicensed') {
+        res.status(403).json({
+          success: false,
+          error: 'This administrative action is unavailable because the deployment license has expired or is not installed.'
+        });
         return;
       }
     }
