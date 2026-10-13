@@ -67,6 +67,16 @@ export const accessPassesDb: any = new Datastore({
   autoload: true
 });
 
+export const facilityAssetsDb: any = new Datastore({
+  filename: path.join(DATA_DIR, 'facility-assets.db'),
+  autoload: true
+});
+
+export const maintenanceTicketsDb: any = new Datastore({
+  filename: path.join(DATA_DIR, 'maintenance-tickets.db'),
+  autoload: true
+});
+
 export async function initDb(): Promise<void> {
   // Ensure indexes for fast document queries
   await membersDb.ensureIndexAsync({ fieldName: 'id', unique: true });
@@ -83,6 +93,10 @@ export async function initDb(): Promise<void> {
   await sessionsDb.ensureIndexAsync({ fieldName: 'tokenHash', unique: true });
   await configDb.ensureIndexAsync({ fieldName: 'key', unique: true });
   await accessPassesDb.ensureIndexAsync({ fieldName: 'memberId', unique: true });
+  await facilityAssetsDb.ensureIndexAsync({ fieldName: 'id', unique: true });
+  await facilityAssetsDb.ensureIndexAsync({ fieldName: 'tagCode', unique: true });
+  await maintenanceTicketsDb.ensureIndexAsync({ fieldName: 'id', unique: true });
+  await maintenanceTicketsDb.ensureIndexAsync({ fieldName: 'assetId' });
 
   const adminEmail = process.env.ADMIN_EMAIL?.trim().toLowerCase();
   const adminPassword = process.env.ADMIN_PASSWORD;
@@ -136,6 +150,18 @@ export async function seedDefaultData(): Promise<void> {
     await studioDb.removeAsync({}, { multi: true });
     await studioDb.insertAsync(studioData);
 
+    await facilityAssetsDb.removeAsync({}, { multi: true });
+    if (studioData.facilityAssets && studioData.facilityAssets.length > 0) {
+      await facilityAssetsDb.insertAsync(studioData.facilityAssets);
+      console.log(`🌱 Seeded ${studioData.facilityAssets.length} facility assets into document store.`);
+    }
+
+    await maintenanceTicketsDb.removeAsync({}, { multi: true });
+    if (studioData.maintenanceTickets && studioData.maintenanceTickets.length > 0) {
+      await maintenanceTicketsDb.insertAsync(studioData.maintenanceTickets);
+      console.log(`🌱 Seeded ${studioData.maintenanceTickets.length} maintenance tickets into document store.`);
+    }
+
     await classesDb.removeAsync({}, { multi: true });
     if (studioData.classes && studioData.classes.length > 0) {
       await classesDb.insertAsync(studioData.classes);
@@ -152,6 +178,8 @@ export async function resetDb(): Promise<void> {
   await classBookingsDb.removeAsync({}, { multi: true });
   await classWaitlistDb.removeAsync({}, { multi: true });
   await accessPassesDb.removeAsync({}, { multi: true });
+  await facilityAssetsDb.removeAsync({}, { multi: true });
+  await maintenanceTicketsDb.removeAsync({}, { multi: true });
   await configDb.removeAsync({ key: 'access-pass-signing-key' }, {});
   const memberUsers = await usersDb.findAsync({ role: 'member' });
   for (const user of memberUsers) {

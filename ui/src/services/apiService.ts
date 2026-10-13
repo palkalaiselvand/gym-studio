@@ -5,6 +5,8 @@ import type {
   EnrollmentWaiver,
   AuthenticatedUser,
   Branding,
+  FacilityAsset,
+  MaintenanceTicket,
   Member,
   MembershipCancellationReason,
   MembershipFreezeReason,
@@ -326,6 +328,38 @@ export const apiService = {
     }
 
     return storageService.getStudioDetails();
+  },
+
+  async getFacilitySummary(): Promise<{ assets: FacilityAsset[]; tickets: MaintenanceTicket[]; summary?: Record<string, unknown> }> {
+    try {
+      const assetsResponse = await apiFetch('/facility/assets', { signal: AbortSignal.timeout(3000) });
+      const ticketsResponse = await apiFetch('/facility/tickets', { signal: AbortSignal.timeout(3000) });
+      const summaryResponse = await apiFetch('/facility/summary', { signal: AbortSignal.timeout(3000) });
+      const [assetsJson, ticketsJson, summaryJson] = await Promise.all([
+        assetsResponse.json(),
+        ticketsResponse.json(),
+        summaryResponse.json()
+      ]);
+
+      if (!assetsResponse.ok || !ticketsResponse.ok || !summaryResponse.ok) {
+        throw new Error('Facility data request failed');
+      }
+
+      this.isApiOnline = true;
+      return {
+        assets: Array.isArray(assetsJson.data) ? assetsJson.data : [],
+        tickets: Array.isArray(ticketsJson.data) ? ticketsJson.data : [],
+        summary: summaryJson.data ?? {}
+      };
+    } catch (error) {
+      console.warn('Facility summary fallback to studio data', error);
+      const studio = storageService.getStudioDetails();
+      return {
+        assets: Array.isArray(studio.facilityAssets) ? studio.facilityAssets : [],
+        tickets: Array.isArray(studio.maintenanceTickets) ? studio.maintenanceTickets : [],
+        summary: {}
+      };
+    }
   },
 
   async getEnrollmentPlans(): Promise<EnrollmentPlan[]> {

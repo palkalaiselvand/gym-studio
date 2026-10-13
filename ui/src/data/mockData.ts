@@ -409,6 +409,64 @@ export const INITIAL_STUDIO_DETAILS: StudioDetails = {
       intensity: 'High'
     }
   ],
+  recoverySuites: [
+    {
+      id: 'REC-1',
+      name: 'Infrared Sauna Pod',
+      description: 'Quiet post-workout recovery session with full-spectrum infrared heat and guided breathing reset.',
+      duration: '30 mins',
+      capacity: 1,
+      tier: 'Gold',
+      price: 18,
+      availability: 'Mon-Sun · 6:00 AM-9:00 PM'
+    },
+    {
+      id: 'REC-2',
+      name: 'Cold Plunge Circuit',
+      description: 'Recovery-focused immersion with timed intervals to support inflammation management and energy reset.',
+      duration: '15 mins',
+      capacity: 2,
+      tier: 'Platinum',
+      price: 12,
+      availability: 'Tue-Sat · 7:00 AM-8:00 PM'
+    },
+    {
+      id: 'REC-3',
+      name: 'Massage Chair Recovery',
+      description: 'Targeted deep-tissue release for calves, glutes, and upper back before the next training block.',
+      duration: '20 mins',
+      capacity: 4,
+      tier: 'Silver',
+      price: 15,
+      availability: 'Daily · 5:00 AM-10:00 PM'
+    }
+  ],
+  ptPackages: [
+    {
+      id: 'PT-1',
+      name: 'Starter PT Pack',
+      sessions: 4,
+      price: 199,
+      description: 'Ideal for tuning goals, exercise form, and a measurable training baseline.',
+      expiresIn: '90 days'
+    },
+    {
+      id: 'PT-2',
+      name: 'Performance Coaching Pack',
+      sessions: 8,
+      price: 379,
+      description: 'Progressive performance plan for members building strength, mobility, and consistency.',
+      expiresIn: '120 days'
+    },
+    {
+      id: 'PT-3',
+      name: 'Executive Priority Coaching',
+      sessions: 12,
+      price: 549,
+      description: 'High-touch training cadence with schedule planning and ongoing accountability.',
+      expiresIn: '180 days'
+    }
+  ],
   announcements: [
     {
       id: 'ANN-1',

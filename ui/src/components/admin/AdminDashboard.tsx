@@ -1,4 +1,4 @@
-﻿import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import {
   Search,
   UserPlus,
@@ -10,12 +10,14 @@ import {
   Users,
   Palette
 } from 'lucide-react';
-import type { Member, MembershipStatus } from '../../types';
+import type { FacilityAsset, MaintenanceTicket, Member, MembershipStatus } from '../../types';
+import { apiService } from '../../services/apiService';
 import { StatsOverview } from './StatsOverview';
 import { MemberModal } from './MemberModal';
 import { MemberDeleteModal } from './MemberDeleteModal';
 import { TeamAccessPanel } from './TeamAccessPanel';
 import { BrandingPanel } from './BrandingPanel';
+import { FacilityOperationsPanel } from './FacilityOperationsPanel';
 import { useBranding } from '../../branding/branding';
 
 interface AdminDashboardProps {
@@ -64,6 +66,21 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
   const [memberToDelete, setMemberToDelete] = useState<Member | null>(null);
   const [isTeamAccessOpen, setIsTeamAccessOpen] = useState(false);
   const [isBrandingOpen, setIsBrandingOpen] = useState(false);
+  const [facilityAssets, setFacilityAssets] = useState<FacilityAsset[]>([]);
+  const [maintenanceTickets, setMaintenanceTickets] = useState<MaintenanceTicket[]>([]);
+
+  useEffect(() => {
+    void (async () => {
+      try {
+        const summary = await apiService.getFacilitySummary();
+        setFacilityAssets(summary.assets ?? []);
+        setMaintenanceTickets(summary.tickets ?? []);
+      } catch {
+        setFacilityAssets([]);
+        setMaintenanceTickets([]);
+      }
+    })();
+  }, []);
 
   // Filtered members calculation
   const filteredMembers = useMemo(() => {
@@ -199,6 +216,8 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
 
       {/* Metrics Row */}
       <StatsOverview members={members} />
+
+      <FacilityOperationsPanel assets={facilityAssets} tickets={maintenanceTickets} />
 
       {/* Filter and Search Bar */}
       <div className="glass-panel filter-bar">

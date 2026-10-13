@@ -104,6 +104,54 @@ export const StudioDetailsView: React.FC<StudioDetailsViewProps> = ({ studio }) 
         </div>
       )}
 
+      <div className="glass-panel" style={{ padding: '1.75rem' }}>
+        <h3 style={{ fontSize: '1.2rem', marginBottom: '1.25rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+          <Award size={20} color="var(--accent-primary)" />
+          <span>Phase 3 Offerings</span>
+        </h3>
+
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '1rem' }}>
+          <div>
+            <h4 style={{ fontSize: '0.95rem', marginBottom: '0.75rem', color: 'var(--text-main)' }}>Recovery Suites</h4>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+              {(studio.recoverySuites || []).map((suite) => (
+                <div key={suite.id} style={{ background: 'var(--bg-secondary)', border: '1px solid var(--border-subtle)', borderRadius: 'var(--radius-md)', padding: '0.9rem 1rem' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.5rem', marginBottom: '0.35rem' }}>
+                    <strong style={{ color: 'var(--text-main)' }}>{suite.name}</strong>
+                    <span style={{ fontSize: '0.72rem', padding: '0.2rem 0.5rem', borderRadius: '999px', background: 'rgba(16, 185, 129, 0.15)', color: '#34d399', fontWeight: 700 }}>{suite.tier}</span>
+                  </div>
+                  <p style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', marginBottom: '0.5rem', lineHeight: '1.45' }}>{suite.description}</p>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.78rem', color: 'var(--text-muted)' }}>
+                    <span>{suite.duration}</span>
+                    <span>{suite.capacity} pod{suite.capacity > 1 ? 's' : ''}</span>
+                    <span>{suite.availability}</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <div>
+            <h4 style={{ fontSize: '0.95rem', marginBottom: '0.75rem', color: 'var(--text-main)' }}>PT Packages</h4>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+              {(studio.ptPackages || []).map((pkg) => (
+                <div key={pkg.id} style={{ background: 'var(--bg-secondary)', border: '1px solid var(--border-subtle)', borderRadius: 'var(--radius-md)', padding: '0.9rem 1rem' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.75rem', marginBottom: '0.35rem' }}>
+                    <strong style={{ color: 'var(--text-main)' }}>{pkg.name}</strong>
+                    <span style={{ fontWeight: 700, color: 'var(--accent-primary)' }}>${pkg.price}</span>
+                  </div>
+                  <p style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', marginBottom: '0.5rem', lineHeight: '1.45' }}>{pkg.description}</p>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.78rem', color: 'var(--text-muted)' }}>
+                    <span>{pkg.sessions} sessions</span>
+                    <span>Valid {pkg.expiresIn}</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      </div>
+
       {/* Two Column: Location/Hours & Amenities */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '1.5rem' }}>
         {/* Location & Hours */}

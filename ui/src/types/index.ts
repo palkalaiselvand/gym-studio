@@ -184,6 +184,26 @@ export interface StudioAmenity {
   highlight?: boolean;
 }
 
+export interface RecoverySuite {
+  id: string;
+  name: string;
+  description: string;
+  duration: string;
+  capacity: number;
+  tier: 'Silver' | 'Gold' | 'Platinum' | 'VIP';
+  price: number;
+  availability: string;
+}
+
+export interface PersonalTrainingPackage {
+  id: string;
+  name: string;
+  sessions: number;
+  price: number;
+  description: string;
+  expiresIn: string;
+}
+
 export interface StudioClass {
   id: string;
   name: string;
@@ -227,6 +247,48 @@ export interface StudioAnnouncement {
   tag: 'Facility' | 'Event' | 'Holiday' | 'New Class';
 }
 
+export type FacilityAssetCategory = 'Cardio' | 'Strength' | 'Recovery' | 'Infrastructure' | 'Access Control';
+export type FacilityAssetStatus = 'Operational' | 'Degraded' | 'Out of Service' | 'Under Maintenance' | 'Decommissioned';
+export type MaintenanceSeverity = 'P1' | 'P2' | 'P3';
+export type MaintenanceStatus = 'Open' | 'Assigned' | 'In Progress' | 'Resolved' | 'Closed';
+
+export interface FacilityAsset {
+  id: string;
+  tagCode: string;
+  category: FacilityAssetCategory;
+  make: string;
+  model: string;
+  serialNumber: string;
+  commissionDate: string;
+  warrantyExpiration: string;
+  status: FacilityAssetStatus;
+  locationZone: string;
+  locationFloor: string;
+  hasIoT: boolean;
+  totalRunHours: number;
+  lastHeartbeat?: string;
+  lastInspection?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface MaintenanceTicket {
+  id: string;
+  assetId: string;
+  assetTag: string;
+  reporterName: string;
+  reporterType: 'member' | 'staff';
+  severity: MaintenanceSeverity;
+  issueType: string;
+  description: string;
+  photoUrls: string[];
+  status: MaintenanceStatus;
+  eta?: string;
+  createdAt: string;
+  updatedAt: string;
+  resolvedAt?: string;
+}
+
 export interface StudioDetails {
   name: string;
   tagline: string;
@@ -244,8 +306,12 @@ export interface StudioDetails {
   amenities: StudioAmenity[];
   trainers: Trainer[];
   classes: StudioClass[];
+  recoverySuites: RecoverySuite[];
+  ptPackages: PersonalTrainingPackage[];
   announcements: StudioAnnouncement[];
   rules: string[];
+  facilityAssets?: FacilityAsset[];
+  maintenanceTickets?: MaintenanceTicket[];
 }
 
 export interface ToastMessage {

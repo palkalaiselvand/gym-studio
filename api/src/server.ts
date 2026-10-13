@@ -10,6 +10,7 @@ import seedRouter from './routes/seed.js';
 import enrollmentsRouter from './routes/enrollments.js';
 import authRouter from './routes/auth.js';
 import accessRouter from './routes/access.js';
+import facilityRouter from './routes/facility.js';
 import { processMembershipLifecycle } from './membershipLifecycle.js';
 
 const app = express();
@@ -50,6 +51,7 @@ app.use('/api/seed', seedRouter);
 app.use('/api/enrollments', enrollmentsRouter);
 app.use('/api/auth', authRouter);
 app.use('/api/access', accessRouter);
+app.use('/api/facility', facilityRouter);
 
 // 404 Handler
 app.use((_req, res) => {
