@@ -198,6 +198,18 @@ export interface StudioClass {
   intensity: 'Low' | 'Medium' | 'High' | 'Extreme';
 }
 
+export interface ClassWaitlistEntry {
+  id: string;
+  classId: string;
+  memberId: string;
+  waitlistKey: string;
+  status: 'waiting' | 'promoted' | 'cancelled';
+  position: number;
+  createdAt: string;
+  promotedAt?: string;
+  cancelledAt?: string;
+}
+
 export interface Trainer {
   id: string;
   name: string;

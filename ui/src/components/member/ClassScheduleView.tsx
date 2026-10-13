@@ -12,19 +12,25 @@ import type { StudioClass } from '../../types';
 interface ClassScheduleViewProps {
   classes: StudioClass[];
   bookedClassIds: string[];
+  waitlistedClassIds?: string[];
   bookingDisabled?: boolean;
   highIntensityRestricted?: boolean;
   onBookClass?: (classId: string, className: string) => Promise<boolean>;
   onCancelClass?: (classId: string, className: string) => Promise<boolean>;
+  onJoinWaitlist?: (classId: string, className: string) => Promise<boolean>;
+  onLeaveWaitlist?: (classId: string, className: string) => Promise<boolean>;
 }
 
 export const ClassScheduleView: React.FC<ClassScheduleViewProps> = ({
   classes,
   bookedClassIds,
+  waitlistedClassIds = [],
   bookingDisabled = false,
   highIntensityRestricted = false,
   onBookClass,
-  onCancelClass
+  onCancelClass,
+  onJoinWaitlist,
+  onLeaveWaitlist
 }) => {
   const [selectedCategory, setSelectedCategory] = useState<string>('ALL');
   const [busyClassIds, setBusyClassIds] = useState<string[]>([]);
@@ -39,14 +45,20 @@ export const ClassScheduleView: React.FC<ClassScheduleViewProps> = ({
 
   const toggleBooking = async (cls: StudioClass) => {
     const isBooked = bookedClassIds.includes(cls.id);
+    const isWaitlisted = waitlistedClassIds.includes(cls.id);
     if (busyClassIds.includes(cls.id)) return;
     setBookingError('');
     setBusyClassIds((current) => [...current, cls.id]);
     try {
+      if (isWaitlisted) {
+        await onLeaveWaitlist?.(cls.id, cls.name);
+        return;
+      }
       if (isBooked) {
         await onCancelClass?.(cls.id, cls.name);
+      } else if (cls.spotsLeft <= 0) {
+        await onJoinWaitlist?.(cls.id, cls.name);
       } else {
-        if (cls.spotsLeft <= 0) return;
         await onBookClass?.(cls.id, cls.name);
       }
     } catch (error) {
@@ -100,6 +112,7 @@ export const ClassScheduleView: React.FC<ClassScheduleViewProps> = ({
       <div className="classes-grid">
         {filteredClasses.map((cls) => {
           const isBooked = bookedClassIds.includes(cls.id);
+          const isWaitlisted = waitlistedClassIds.includes(cls.id);
           const requiresClearance = highIntensityRestricted && ['High', 'Extreme'].includes(cls.intensity);
           const dynamicSpotsLeft = isBooked ? cls.spotsLeft - 1 : cls.spotsLeft;
           const intensityStyle = getIntensityBadge(cls.intensity);
@@ -150,21 +163,21 @@ export const ClassScheduleView: React.FC<ClassScheduleViewProps> = ({
                 <div>
                   <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Capacity</div>
                   <div style={{ fontSize: '0.85rem', fontWeight: 600, color: dynamicSpotsLeft <= 2 ? '#fbbf24' : 'var(--text-main)' }}>
-                    {dynamicSpotsLeft} spots available
+                    {isWaitlisted ? 'Waitlist active' : `${dynamicSpotsLeft} spots available`}
                   </div>
                 </div>
 
                 <button
-                  className={isBooked ? 'btn-secondary' : 'btn-primary'}
+                  className={isBooked || isWaitlisted ? 'btn-secondary' : 'btn-primary'}
                   style={{
                     padding: '0.5rem 1rem',
                     fontSize: '0.8rem',
-                    background: isBooked ? 'rgba(16, 185, 129, 0.2)' : undefined,
-                    borderColor: isBooked ? 'var(--accent-primary)' : undefined,
-                    color: isBooked ? '#34d399' : undefined
+                    background: isBooked ? 'rgba(16, 185, 129, 0.2)' : isWaitlisted ? 'rgba(245, 158, 11, 0.18)' : undefined,
+                    borderColor: isBooked || isWaitlisted ? 'var(--accent-primary)' : undefined,
+                    color: isBooked ? '#34d399' : isWaitlisted ? '#fbbf24' : undefined
                   }}
                   onClick={() => toggleBooking(cls)}
-                  disabled={busyClassIds.includes(cls.id) || (!isBooked && (bookingDisabled || requiresClearance || dynamicSpotsLeft <= 0))}
+                  disabled={busyClassIds.includes(cls.id) || (!isBooked && !isWaitlisted && (bookingDisabled || requiresClearance))}
                   title={requiresClearance ? 'Physician clearance is recommended before booking high-intensity classes' : undefined}
                 >
                   {busyClassIds.includes(cls.id) ? (
@@ -174,12 +187,14 @@ export const ClassScheduleView: React.FC<ClassScheduleViewProps> = ({
                       <Check size={14} />
                       <span>Booked</span>
                     </>
+                  ) : isWaitlisted ? (
+                    <span>On Waitlist</span>
                   ) : bookingDisabled ? (
                     <span>Activation Required</span>
                   ) : requiresClearance ? (
                     <span>Clearance Required</span>
                   ) : dynamicSpotsLeft <= 0 ? (
-                    <span>Waitlist Full</span>
+                    <span>Join Waitlist</span>
                   ) : (
                     <span>Book Spot</span>
                   )}

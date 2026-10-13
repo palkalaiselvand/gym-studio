@@ -37,6 +37,11 @@ export const classBookingsDb: any = new Datastore({
   autoload: true
 });
 
+export const classWaitlistDb: any = new Datastore({
+  filename: path.join(DATA_DIR, 'class-waitlist.db'),
+  autoload: true
+});
+
 export const enrollmentsDb: any = new Datastore({
   filename: path.join(DATA_DIR, 'enrollments.db'),
   autoload: true
@@ -69,6 +74,8 @@ export async function initDb(): Promise<void> {
   await classesDb.ensureIndexAsync({ fieldName: 'id', unique: true });
   await classBookingsDb.ensureIndexAsync({ fieldName: 'id', unique: true });
   await classBookingsDb.ensureIndexAsync({ fieldName: 'bookingKey', unique: true });
+  await classWaitlistDb.ensureIndexAsync({ fieldName: 'id', unique: true });
+  await classWaitlistDb.ensureIndexAsync({ fieldName: 'waitlistKey', unique: true });
   await enrollmentsDb.ensureIndexAsync({ fieldName: 'id', unique: true });
   await enrollmentsDb.ensureIndexAsync({ fieldName: 'memberId', unique: true });
   await usersDb.ensureIndexAsync({ fieldName: 'id', unique: true });
@@ -143,6 +150,7 @@ export async function resetDb(): Promise<void> {
   await seedDefaultData();
   await enrollmentsDb.removeAsync({}, { multi: true });
   await classBookingsDb.removeAsync({}, { multi: true });
+  await classWaitlistDb.removeAsync({}, { multi: true });
   await accessPassesDb.removeAsync({}, { multi: true });
   await configDb.removeAsync({ key: 'access-pass-signing-key' }, {});
   const memberUsers = await usersDb.findAsync({ role: 'member' });

@@ -125,6 +125,19 @@ export interface StudioClass {
   _id?: string;
 }
 
+export interface ClassWaitlistEntry {
+  id: string;
+  classId: string;
+  memberId: string;
+  waitlistKey: string;
+  status: 'waiting' | 'promoted' | 'cancelled';
+  position: number;
+  createdAt: string;
+  promotedAt?: string;
+  cancelledAt?: string;
+  _id?: string;
+}
+
 export interface Trainer {
   id: string;
   name: string;

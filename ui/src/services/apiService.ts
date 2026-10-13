@@ -391,6 +391,30 @@ export const apiService = {
     return readResponse<string[]>(response);
   },
 
+  async joinWaitlist(classId: string): Promise<{ classId: string; position: number }> {
+    const response = await apiFetch(`/classes/${encodeURIComponent(classId)}/waitlist`, {
+      method: 'POST',
+      signal: AbortSignal.timeout(4000)
+    });
+    const data = await readResponse<{ classId: string; position: number }>(response);
+    this.isApiOnline = true;
+    return data;
+  },
+
+  async leaveWaitlist(classId: string): Promise<void> {
+    const response = await apiFetch(`/classes/${encodeURIComponent(classId)}/waitlist`, {
+      method: 'DELETE',
+      signal: AbortSignal.timeout(4000)
+    });
+    await readResponse<unknown>(response);
+    this.isApiOnline = true;
+  },
+
+  async getMyWaitlistedClasses(): Promise<string[]> {
+    const response = await apiFetch('/classes/waitlist/me', { signal: AbortSignal.timeout(3000) });
+    return readResponse<string[]>(response);
+  },
+
   async reviewMemberDuplicate(id: string, status: 'reviewed' | 'review_required'): Promise<Member> {
     const response = await apiFetch(`/members/${encodeURIComponent(id)}/duplicate-review`, {
       method: 'PATCH',

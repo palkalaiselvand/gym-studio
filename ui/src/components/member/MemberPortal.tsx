@@ -45,6 +45,7 @@ export const MemberPortal: React.FC<MemberPortalProps> = ({
   const [activeTab, setActiveTab] = useState<'profile' | 'studio' | 'classes' | 'rules'>('profile');
   const [isEditProfileOpen, setIsEditProfileOpen] = useState(false);
   const [bookedClassIds, setBookedClassIds] = useState<string[]>([]);
+  const [waitlistedClassIds, setWaitlistedClassIds] = useState<string[]>([]);
   const onToastRef = useRef(onToast);
 
   const tierInfo = TIER_CONFIG[member.membership.tier] || TIER_CONFIG.Gold;
@@ -56,10 +57,18 @@ export const MemberPortal: React.FC<MemberPortalProps> = ({
 
   useEffect(() => {
     let cancelled = false;
-    apiService.getClassBookings()
-      .then((ids) => { if (!cancelled) setBookedClassIds(ids); })
+    Promise.all([
+      apiService.getClassBookings(),
+      apiService.getMyWaitlistedClasses()
+    ])
+      .then(([bookings, waitlist]) => {
+        if (!cancelled) {
+          setBookedClassIds(bookings);
+          setWaitlistedClassIds(waitlist);
+        }
+      })
       .catch((error: unknown) => {
-        if (!cancelled) onToastRef.current('Class bookings unavailable', error instanceof Error ? error.message : 'Could not load reservations.', 'error');
+        if (!cancelled) onToastRef.current('Class schedule unavailable', error instanceof Error ? error.message : 'Could not load reservations.', 'error');
       });
     return () => { cancelled = true; };
   }, [member.id]);
@@ -94,6 +103,30 @@ export const MemberPortal: React.FC<MemberPortalProps> = ({
       return true;
     } catch (error) {
       onToast('Cancellation failed', error instanceof Error ? error.message : 'The reservation could not be cancelled.', 'error');
+      return false;
+    }
+  };
+
+  const handleJoinWaitlist = async (classId: string, className: string): Promise<boolean> => {
+    try {
+      await apiService.joinWaitlist(classId);
+      setWaitlistedClassIds((current) => current.includes(classId) ? current : [...current, classId]);
+      onToast('Added to Waitlist', `You were added to the waitlist for "${className}". We will notify you if a spot opens.`, 'info');
+      return true;
+    } catch (error) {
+      onToast('Waitlist update failed', error instanceof Error ? error.message : 'The waitlist could not be updated.', 'error');
+      return false;
+    }
+  };
+
+  const handleLeaveWaitlist = async (classId: string, className: string): Promise<boolean> => {
+    try {
+      await apiService.leaveWaitlist(classId);
+      setWaitlistedClassIds((current) => current.filter((id) => id !== classId));
+      onToast('Waitlist Updated', `You left the waitlist for "${className}".`, 'info');
+      return true;
+    } catch (error) {
+      onToast('Waitlist update failed', error instanceof Error ? error.message : 'The waitlist could not be updated.', 'error');
       return false;
     }
   };
@@ -420,10 +453,13 @@ export const MemberPortal: React.FC<MemberPortalProps> = ({
           <ClassScheduleView
             classes={studio.classes}
             bookedClassIds={bookedClassIds}
+            waitlistedClassIds={waitlistedClassIds}
             bookingDisabled={!membershipAllowsAccess}
             highIntensityRestricted={member.healthScreening?.physicianClearanceRequired ?? false}
             onBookClass={handleBookClass}
             onCancelClass={handleCancelClass}
+            onJoinWaitlist={handleJoinWaitlist}
+            onLeaveWaitlist={handleLeaveWaitlist}
           />
         </div>
       )}
