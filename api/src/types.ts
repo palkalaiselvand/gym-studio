@@ -175,6 +175,53 @@ export interface StudioAnnouncement {
   tag: 'Facility' | 'Event' | 'Holiday' | 'New Class';
 }
 
+export interface PartnerGym {
+  id: string;
+  name: string;
+  city: string;
+  distanceMiles: number;
+  status: 'Active' | 'Pilot' | 'Testing';
+  reciprocityRate: string;
+  guestAccessPerMonth: number;
+  accessHours: string;
+}
+
+export interface MerchantPerk {
+  id: string;
+  merchantName: string;
+  category: 'Coffee' | 'Recovery' | 'Retail' | 'Nutrition';
+  offer: string;
+  benefit: string;
+  pointsCost: number;
+  validFor: string;
+}
+
+export interface LoyaltySummary {
+  currentPoints: number;
+  streakDays: number;
+  activeChallenges: number;
+  challengeTitle: string;
+  referralCode: string;
+  referralsThisMonth: number;
+}
+
+export type LicenseSku = 'STARTER' | 'GROWTH' | 'ENTERPRISE';
+export type LicenseState = 'active' | 'trial' | 'grace-period' | 'expired';
+
+export interface LicenseConfig {
+  sku: LicenseSku;
+  status: LicenseState;
+  issuedAt: string;
+  expiresAt: string | null;
+  gracePeriodDays: number;
+  maxStudios: number;
+  maxMembers: number;
+  customerName: string;
+  features: string[];
+  customDomain: string | null;
+  emailFrom: string | null;
+}
+
 export type FacilityAssetCategory = 'Cardio' | 'Strength' | 'Recovery' | 'Infrastructure' | 'Access Control';
 export type FacilityAssetStatus = 'Operational' | 'Degraded' | 'Out of Service' | 'Under Maintenance' | 'Decommissioned';
 export type MaintenanceSeverity = 'P1' | 'P2' | 'P3';
@@ -240,6 +287,9 @@ export interface StudioDetails {
   ptPackages: PersonalTrainingPackage[];
   announcements: StudioAnnouncement[];
   rules: string[];
+  partnerGyms?: PartnerGym[];
+  merchantPerks?: MerchantPerk[];
+  loyaltySummary?: LoyaltySummary;
   facilityAssets?: FacilityAsset[];
   maintenanceTickets?: MaintenanceTicket[];
   _id?: string;

@@ -1,8 +1,8 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { ArrowLeft, ImageOff, Palette, Save, Upload } from 'lucide-react';
 import { apiService } from '../../services/apiService';
 import { COUNTRIES, applyBranding, formatMoney, useBranding } from '../../branding/branding';
-import type { Branding } from '../../types';
+import type { Branding, LicenseConfig } from '../../types';
 
 interface BrandingPanelProps {
   onBack: () => void;
@@ -13,9 +13,22 @@ const MAX_LOGO_BYTES = 130 * 1024;
 export const BrandingPanel: React.FC<BrandingPanelProps> = ({ onBack }) => {
   const { branding, setBranding } = useBranding();
   const [draft, setDraft] = useState<Branding>(branding);
+  const [licenseDraft, setLicenseDraft] = useState<LicenseConfig | null>(null);
   const [error, setError] = useState('');
   const [saved, setSaved] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  const [isSavingLicense, setIsSavingLicense] = useState(false);
+
+  useEffect(() => {
+    void (async () => {
+      try {
+        const nextLicense = await apiService.getLicense();
+        setLicenseDraft(nextLicense);
+      } catch {
+        setLicenseDraft(null);
+      }
+    })();
+  }, []);
 
   const update = (changes: Partial<Branding>) => {
     setDraft((current) => ({ ...current, ...changes }));
@@ -60,6 +73,21 @@ export const BrandingPanel: React.FC<BrandingPanelProps> = ({ onBack }) => {
       setError(saveError instanceof Error ? saveError.message : 'Branding could not be saved.');
     } finally {
       setIsSaving(false);
+    }
+  };
+
+  const saveLicense = async () => {
+    if (!licenseDraft) return;
+    setIsSavingLicense(true);
+    try {
+      const updated = await apiService.updateLicense(licenseDraft);
+      setLicenseDraft(updated);
+      setError('');
+      setSaved(true);
+    } catch (saveError) {
+      setError(saveError instanceof Error ? saveError.message : 'License settings could not be saved.');
+    } finally {
+      setIsSavingLicense(false);
     }
   };
 
@@ -124,6 +152,83 @@ export const BrandingPanel: React.FC<BrandingPanelProps> = ({ onBack }) => {
 
         <button className="btn-primary" type="submit" disabled={isSaving}><Save size={16} /><span>Save branding</span></button>
       </form>
+
+      {licenseDraft && (
+        <div style={{ borderTop: '1px solid var(--border-subtle)', marginTop: '1.5rem', paddingTop: '1.5rem', maxWidth: '720px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '1rem', marginBottom: '1rem' }}>
+            <div>
+              <h3 style={{ marginBottom: '0.25rem' }}>License &amp; entitlement</h3>
+              <p className="enrollment-muted">Customer deployment settings for supported tiers, feature access, and license expiry.</p>
+            </div>
+            <button type="button" className="btn-secondary-sm" onClick={saveLicense} disabled={isSavingLicense}>
+              <Save size={14} /> {isSavingLicense ? 'Saving...' : 'Save license'}
+            </button>
+          </div>
+
+          <div className="form-row">
+            <label className="form-group">
+              <span className="form-label">SKU</span>
+              <select className="form-select" value={licenseDraft.sku} onChange={(event) => setLicenseDraft({ ...licenseDraft, sku: event.target.value as LicenseConfig['sku'] })}>
+                <option value="STARTER">STARTER</option>
+                <option value="GROWTH">GROWTH</option>
+                <option value="ENTERPRISE">ENTERPRISE</option>
+              </select>
+            </label>
+            <label className="form-group">
+              <span className="form-label">Status</span>
+              <select className="form-select" value={licenseDraft.status} onChange={(event) => setLicenseDraft({ ...licenseDraft, status: event.target.value as LicenseConfig['status'] })}>
+                <option value="active">Active</option>
+                <option value="trial">Trial</option>
+                <option value="grace-period">Grace period</option>
+                <option value="expired">Expired</option>
+              </select>
+            </label>
+          </div>
+
+          <div className="form-row">
+            <label className="form-group">
+              <span className="form-label">Customer name</span>
+              <input className="form-input" value={licenseDraft.customerName} onChange={(event) => setLicenseDraft({ ...licenseDraft, customerName: event.target.value })} />
+            </label>
+            <label className="form-group">
+              <span className="form-label">Custom domain</span>
+              <input className="form-input" value={licenseDraft.customDomain ?? ''} onChange={(event) => setLicenseDraft({ ...licenseDraft, customDomain: event.target.value || null })} placeholder="example.com" />
+            </label>
+          </div>
+
+          <div className="form-row">
+            <label className="form-group">
+              <span className="form-label">Expires at</span>
+              <input className="form-input" type="datetime-local" value={licenseDraft.expiresAt ? new Date(licenseDraft.expiresAt).toISOString().slice(0, 16) : ''} onChange={(event) => setLicenseDraft({ ...licenseDraft, expiresAt: event.target.value ? new Date(event.target.value).toISOString() : null })} />
+            </label>
+            <label className="form-group">
+              <span className="form-label">Grace period (days)</span>
+              <input className="form-input" type="number" min={0} max={30} value={licenseDraft.gracePeriodDays} onChange={(event) => setLicenseDraft({ ...licenseDraft, gracePeriodDays: Number(event.target.value) || 0 })} />
+            </label>
+          </div>
+
+          <div className="form-row">
+            <label className="form-group">
+              <span className="form-label">Max studios</span>
+              <input className="form-input" type="number" min={1} value={licenseDraft.maxStudios} onChange={(event) => setLicenseDraft({ ...licenseDraft, maxStudios: Number(event.target.value) || 1 })} />
+            </label>
+            <label className="form-group">
+              <span className="form-label">Max members</span>
+              <input className="form-input" type="number" min={1} value={licenseDraft.maxMembers} onChange={(event) => setLicenseDraft({ ...licenseDraft, maxMembers: Number(event.target.value) || 1 })} />
+            </label>
+          </div>
+
+          <div className="form-group">
+            <span className="form-label">Feature list</span>
+            <textarea
+              className="form-input"
+              rows={4}
+              value={licenseDraft.features.join(', ')}
+              onChange={(event) => setLicenseDraft({ ...licenseDraft, features: event.target.value.split(',').map((feature) => feature.trim()).filter(Boolean) })}
+            />
+          </div>
+        </div>
+      )}
     </section>
   );
 };

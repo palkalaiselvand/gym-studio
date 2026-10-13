@@ -11,7 +11,8 @@ import type {
   MembershipCancellationReason,
   MembershipFreezeReason,
   StaffAccount,
-  StudioDetails
+  StudioDetails,
+  LicenseConfig
 } from '../types';
 import { storageService } from './storageService';
 import { TIER_CONFIG } from '../data/mockData';
@@ -360,6 +361,41 @@ export const apiService = {
         summary: {}
       };
     }
+  },
+
+  async getLicense(): Promise<LicenseConfig> {
+    try {
+      const response = await apiFetch('/license', { signal: AbortSignal.timeout(3000) });
+      const data = await readResponse<LicenseConfig>(response);
+      this.isApiOnline = true;
+      return data;
+    } catch (error) {
+      console.warn('Using demo license state because the API is unavailable', error);
+      return {
+        sku: 'STARTER',
+        status: 'active',
+        issuedAt: new Date().toISOString(),
+        expiresAt: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString(),
+        gracePeriodDays: 7,
+        maxStudios: 1,
+        maxMembers: 500,
+        customerName: 'Demo Studio',
+        features: ['member-directory', 'class-booking', 'facility-ops', 'brand-customization'],
+        customDomain: null,
+        emailFrom: 'hello@apexstudio.fit'
+      };
+    }
+  },
+
+  async updateLicense(license: LicenseConfig): Promise<LicenseConfig> {
+    const response = await apiFetch('/license', {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(license)
+    });
+    const data = await readResponse<LicenseConfig>(response);
+    this.isApiOnline = true;
+    return data;
   },
 
   async getEnrollmentPlans(): Promise<EnrollmentPlan[]> {

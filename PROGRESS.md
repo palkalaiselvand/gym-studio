@@ -6,7 +6,7 @@ Roadmap source: [product requirement/07_iterative_implementation_roadmap.md](./p
 
 Stack: React/TS SPA (`ui/`), Express/TS API (`api/`), NeDB storage. Build with `npm run build:api` and `npm run build:ui`. Lint with `npm run lint --prefix ui`. There is no test runner; use isolated API smoke tests (temp `DATA_DIR`, `PORT=5150`, `ADMIN_EMAIL`, `ADMIN_PASSWORD`).
 
-Last updated: 2026-10-12 (Phase 3 waitlist and scheduling work shipped; Phase 4 asset registry and maintenance workflow started; payment work remains deferred to final phase)
+Last updated: 2026-10-13 (Phase 5 network-and-perks is complete; Phase 6 productization has started with licensing and deployment-config readiness; payment work remains deferred to final phase)
 
 ## Decisions made
 
@@ -25,9 +25,9 @@ Last updated: 2026-10-12 (Phase 3 waitlist and scheduling work shipped; Phase 4 
 | Branding (Epic 8.4 subset) | Admin-configurable name, logo, currency, primary color | Done (commit `9113ce9`) |
 | 2 | Membership lifecycle (non-payment scope) | Done: scheduled pause/resume, renewal-date plan changes, end-of-term cancellation, exit reasons, retention offers, and lifecycle metrics. Billing-dependent behavior deferred to Phase 7 |
 | 3 | Studio offerings, scheduling and retail | Done: waitlist enrollment, capacity promotion, and class scheduling affordances shipped |
-| 4 | Facility maintenance and IoT | In progress: asset registry and maintenance ticket workflow added for the next phase rollout |
-| 5 | Cross-gym network and perks | Not started |
-| 6 | Productization and customer-deployed readiness | Not started |
+| 4 | Facility maintenance and IoT | Done: asset registry and maintenance ticket workflow shipped in the operating dashboard |
+| 5 | Cross-gym network and perks | Done: partner-network, loyalty passport, and merchant-perk marketplace surfaced in the studio detail experience |
+| 6 | Productization and customer-deployed readiness | In progress: licensing, entitlement evaluation, and admin-managed deployment config are in place |
 | 7 | Payment processing and automated billing (final phase) | Deferred: provider selection, credentials, and PCI/compliance readiness are not yet defined |
 
 ## Done
@@ -36,6 +36,8 @@ Last updated: 2026-10-12 (Phase 3 waitlist and scheduling work shipped; Phase 4 
 - Phase 2 (non-payment lifecycle): validated 14–90 day pauses with a 90-day annual cap, three-day in-app resume reminder, and scheduled resume; tier-correct upgrades/downgrades applied after the current term; cancellable plan changes; end-of-term cancellation with structured reasons; retention pause/downgrade offers; lifecycle history; background state reconciliation; and admin pause/retention/cancellation metrics.
 - Phase 3 (initial rollout): class waitlist registration, automatic waitlist promotion on cancellations, and UI affordances for full-class enrollment.
 - Phase 4 (initial rollout): facility asset registry, maintenance ticket triage, and operations dashboard summary for asset health and outage tracking.
+- Phase 5 (initial rollout): cross-gym partner network, loyalty passport data, and local merchant-perk marketplace surfaced in the studio detail experience.
+- Phase 6 (initial rollout): license/entitlement model with SKU limits, grace-period handling, customer-configurable branding and deployment-ready metadata, and admin UI support for updating the active deployment license.
 - Branding: public `GET /api/branding`, admin-only validated `PUT /api/branding`, Branding panel on the admin dashboard, UI-wide name/logo/color/currency formatting, currency-aware contract text.
 
 ## Known gaps and next steps

@@ -5,6 +5,7 @@ import { initDb } from './db.js';
 import membersRouter from './routes/members.js';
 import studioRouter from './routes/studio.js';
 import brandingRouter from './routes/branding.js';
+import licenseRouter from './routes/license.js';
 import classesRouter from './routes/classes.js';
 import seedRouter from './routes/seed.js';
 import enrollmentsRouter from './routes/enrollments.js';
@@ -46,6 +47,7 @@ app.get('/api/health', (_req, res) => {
 app.use('/api/members', membersRouter);
 app.use('/api/studio', studioRouter);
 app.use('/api/branding', brandingRouter);
+app.use('/api/license', licenseRouter);
 app.use('/api/classes', classesRouter);
 app.use('/api/seed', seedRouter);
 app.use('/api/enrollments', enrollmentsRouter);

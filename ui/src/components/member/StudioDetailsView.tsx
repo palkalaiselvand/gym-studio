@@ -152,6 +152,85 @@ export const StudioDetailsView: React.FC<StudioDetailsViewProps> = ({ studio }) 
         </div>
       </div>
 
+      {(studio.partnerGyms?.length || studio.merchantPerks?.length || studio.loyaltySummary) && (
+        <div className="glass-panel" style={{ padding: '1.75rem' }}>
+          <h3 style={{ fontSize: '1.2rem', marginBottom: '1.25rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+            <Award size={20} color="var(--accent-primary)" />
+            <span>Phase 5 Network & Perks</span>
+          </h3>
+
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: '1rem' }}>
+            {studio.loyaltySummary && (
+              <div style={{ background: 'var(--bg-secondary)', border: '1px solid var(--border-subtle)', borderRadius: 'var(--radius-md)', padding: '1rem' }}>
+                <div style={{ fontSize: '0.7rem', textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--text-muted)', marginBottom: '0.75rem' }}>
+                  Loyalty Passport
+                </div>
+                <div style={{ display: 'flex', alignItems: 'baseline', gap: '0.5rem', marginBottom: '0.75rem' }}>
+                  <strong style={{ fontSize: '2rem', color: 'var(--text-main)' }}>{studio.loyaltySummary.currentPoints}</strong>
+                  <span style={{ color: 'var(--text-secondary)' }}>points</span>
+                </div>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: '0.75rem', fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
+                  <div><div style={{ color: 'var(--text-muted)' }}>Streak</div><strong style={{ color: 'var(--text-main)' }}>{studio.loyaltySummary.streakDays} days</strong></div>
+                  <div><div style={{ color: 'var(--text-muted)' }}>Challenges</div><strong style={{ color: 'var(--text-main)' }}>{studio.loyaltySummary.activeChallenges}</strong></div>
+                  <div><div style={{ color: 'var(--text-muted)' }}>Challenge</div><strong style={{ color: 'var(--text-main)' }}>{studio.loyaltySummary.challengeTitle}</strong></div>
+                  <div><div style={{ color: 'var(--text-muted)' }}>Referrals</div><strong style={{ color: 'var(--text-main)' }}>{studio.loyaltySummary.referralsThisMonth}</strong></div>
+                </div>
+                <div style={{ marginTop: '0.9rem', fontSize: '0.78rem', color: 'var(--text-secondary)' }}>
+                  Referral code: <strong style={{ color: 'var(--text-main)' }}>{studio.loyaltySummary.referralCode}</strong>
+                </div>
+              </div>
+            )}
+
+            {studio.partnerGyms && studio.partnerGyms.length > 0 && (
+              <div style={{ background: 'var(--bg-secondary)', border: '1px solid var(--border-subtle)', borderRadius: 'var(--radius-md)', padding: '1rem' }}>
+                <div style={{ fontSize: '0.7rem', textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--text-muted)', marginBottom: '0.9rem' }}>
+                  Partner Network
+                </div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                  {studio.partnerGyms.map((gym) => (
+                    <div key={gym.id} style={{ padding: '0.7rem 0.8rem', border: '1px solid var(--border-subtle)', borderRadius: 'var(--radius-sm)', background: 'rgba(15, 23, 42, 0.2)' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', gap: '0.5rem', marginBottom: '0.35rem' }}>
+                        <strong style={{ color: 'var(--text-main)' }}>{gym.name}</strong>
+                        <span style={{ fontSize: '0.72rem', padding: '0.15rem 0.45rem', borderRadius: '999px', background: 'rgba(16, 185, 129, 0.15)', color: '#34d399', fontWeight: 700 }}>{gym.status}</span>
+                      </div>
+                      <div style={{ fontSize: '0.78rem', color: 'var(--text-secondary)' }}>{gym.city}</div>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '0.5rem' }}>
+                        <span>{gym.distanceMiles} mi</span>
+                        <span>{gym.reciprocityRate}</span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {studio.merchantPerks && studio.merchantPerks.length > 0 && (
+              <div style={{ background: 'var(--bg-secondary)', border: '1px solid var(--border-subtle)', borderRadius: 'var(--radius-md)', padding: '1rem' }}>
+                <div style={{ fontSize: '0.7rem', textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--text-muted)', marginBottom: '0.9rem' }}>
+                  Local Perks
+                </div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                  {studio.merchantPerks.map((perk) => (
+                    <div key={perk.id} style={{ padding: '0.7rem 0.8rem', border: '1px solid var(--border-subtle)', borderRadius: 'var(--radius-sm)', background: 'rgba(15, 23, 42, 0.2)' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', gap: '0.5rem', marginBottom: '0.25rem' }}>
+                        <strong style={{ color: 'var(--text-main)' }}>{perk.merchantName}</strong>
+                        <span style={{ fontSize: '0.72rem', color: 'var(--accent-primary)', fontWeight: 700 }}>{perk.category}</span>
+                      </div>
+                      <div style={{ fontSize: '0.78rem', color: 'var(--text-secondary)', marginBottom: '0.25rem' }}>{perk.offer}</div>
+                      <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>{perk.benefit}</div>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.72rem', color: 'var(--text-muted)', marginTop: '0.5rem' }}>
+                        <span>{perk.pointsCost} pts</span>
+                        <span>{perk.validFor}</span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
       {/* Two Column: Location/Hours & Amenities */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '1.5rem' }}>
         {/* Location & Hours */}

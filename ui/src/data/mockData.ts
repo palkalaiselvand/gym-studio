@@ -497,7 +497,85 @@ export const INITIAL_STUDIO_DETAILS: StudioDetails = {
     'Closed-toe athletic shoes required at all times (except during Yoga/Pilates classes in Zenith studio).',
     'Chalk is permitted on designated Olympic platforms only; wipe bars clean after deadlifting or snatches.',
     'Guest passes must be registered at the concierge desk prior to gym floor access.'
-  ]
+  ],
+  partnerGyms: [
+    {
+      id: 'GYM-101',
+      name: 'North Loop Athletic Club',
+      city: 'Brooklyn, NY',
+      distanceMiles: 3.8,
+      status: 'Active',
+      reciprocityRate: '2 visits / 30 days',
+      guestAccessPerMonth: 2,
+      accessHours: 'Mon–Sun · 5:00 AM–10:00 PM'
+    },
+    {
+      id: 'GYM-102',
+      name: 'Harbor Strength Collective',
+      city: 'Queens, NY',
+      distanceMiles: 6.1,
+      status: 'Pilot',
+      reciprocityRate: '1 guest + 1 class pass',
+      guestAccessPerMonth: 1,
+      accessHours: 'Mon–Sat · 6:00 AM–9:00 PM'
+    },
+    {
+      id: 'GYM-103',
+      name: 'Summit Mobility Lab',
+      city: 'Manhattan, NY',
+      distanceMiles: 9.4,
+      status: 'Testing',
+      reciprocityRate: '1 visit / month',
+      guestAccessPerMonth: 1,
+      accessHours: 'Tue–Sun · 7:00 AM–8:00 PM'
+    }
+  ],
+  merchantPerks: [
+    {
+      id: 'PERK-101',
+      merchantName: 'Ridge & Root Coffee',
+      category: 'Coffee',
+      offer: 'Free oat milk upgrade',
+      benefit: 'One complimentary beverage add-on with any purchase',
+      pointsCost: 75,
+      validFor: '30 days'
+    },
+    {
+      id: 'PERK-102',
+      merchantName: 'Pulse Recovery Studio',
+      category: 'Recovery',
+      offer: 'Infrared sauna pass',
+      benefit: '30-minute recovery session for members with a training streak',
+      pointsCost: 120,
+      validFor: '60 days'
+    },
+    {
+      id: 'PERK-103',
+      merchantName: 'Field & Form',
+      category: 'Retail',
+      offer: '10% off high-performance apparel',
+      benefit: 'Discount applies to base-tech layers and performance socks',
+      pointsCost: 150,
+      validFor: '90 days'
+    },
+    {
+      id: 'PERK-104',
+      merchantName: 'Good Fuel Market',
+      category: 'Nutrition',
+      offer: 'Protein bundle discount',
+      benefit: 'Buy 2 protein packs and receive 1 free shaker',
+      pointsCost: 200,
+      validFor: '45 days'
+    }
+  ],
+  loyaltySummary: {
+    currentPoints: 1480,
+    streakDays: 18,
+    activeChallenges: 2,
+    challengeTitle: 'Strongest Week',
+    referralCode: 'APEX-ROAM',
+    referralsThisMonth: 3
+  }
 };
 
 export const TIER_CONFIG: Record<
