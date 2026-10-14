@@ -103,6 +103,24 @@ export interface Member {
   _id?: string;
 }
 
+export type OrientationRequestStatus = 'pending' | 'confirmed' | 'declined' | 'cancelled';
+
+export interface OrientationRequest {
+  id: string;
+  memberId: string;
+  memberName: string;
+  memberEmail: string;
+  preferredDate: string;
+  preferredTime: string;
+  notes: string;
+  status: OrientationRequestStatus;
+  createdAt: string;
+  updatedAt: string;
+  confirmedAt?: string;
+  confirmedBy?: string;
+  _id?: string;
+}
+
 export interface StudioAmenity {
   name: string;
   description: string;

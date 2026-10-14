@@ -191,6 +191,44 @@ export const BrandingPanel: React.FC<BrandingPanelProps> = ({ onBack, onLicenseU
           </label>
         </div>
 
+        <div className="form-row">
+          <label className="form-group">
+            <span className="form-label">Color theme</span>
+            <select
+              className="form-select"
+              value={draft.theme}
+              onChange={(event) => {
+                const theme = event.target.value === 'light' ? 'light' : 'dark';
+                update({ theme });
+                applyBranding({ ...draft, theme });
+              }}
+            >
+              <option value="dark">Dark</option>
+              <option value="light">Light</option>
+            </select>
+          </label>
+          <label className="form-group">
+            <span className="form-label">Font family</span>
+            <select
+              className="form-select"
+              value={draft.fontFamily}
+              onChange={(event) => {
+                const fontFamily: Branding['fontFamily'] = event.target.value === 'system' ||
+                  event.target.value === 'arial' || event.target.value === 'georgia'
+                  ? event.target.value
+                  : 'modern';
+                update({ fontFamily });
+                applyBranding({ ...draft, fontFamily });
+              }}
+            >
+              <option value="modern">Modern (Plus Jakarta Sans)</option>
+              <option value="system">System sans-serif</option>
+              <option value="arial">Arial</option>
+              <option value="georgia">Georgia</option>
+            </select>
+          </label>
+        </div>
+
         <div className="form-group">
           <span className="form-label">Logo (PNG, JPEG, WebP or SVG, up to 130 KB)</span>
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>

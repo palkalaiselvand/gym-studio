@@ -9,6 +9,7 @@ import {
   facilityAssetsDb,
   maintenanceTicketsDb,
   membersDb,
+  orientationRequestsDb,
   studioDb,
   usersDb
 } from '../db.js';
@@ -78,7 +79,7 @@ router.get('/diagnostics', requireAuth, requireRoles('admin'), async (_req: Requ
 
 router.get('/export', requireAuth, requireRoles('admin'), async (_req: Request, res: Response) => {
   try {
-    const [members, studio, classes, bookings, waitlist, enrollments, assets, tickets, users, branding] =
+    const [members, studio, classes, bookings, waitlist, enrollments, assets, tickets, users, branding, orientations] =
       await Promise.all([
         membersDb.findAsync({}),
         studioDb.findAsync({}),
@@ -89,7 +90,8 @@ router.get('/export', requireAuth, requireRoles('admin'), async (_req: Request, 
         facilityAssetsDb.findAsync({}),
         maintenanceTicketsDb.findAsync({}),
         usersDb.findAsync({}),
-        configDb.findOneAsync({ key: 'branding' })
+        configDb.findOneAsync({ key: 'branding' }),
+        orientationRequestsDb.findAsync({})
       ]);
 
     const filename = `gym-studio-export-${new Date().toISOString().replace(/[:.]/g, '-')}.json`;
@@ -118,6 +120,7 @@ router.get('/export', requireAuth, requireRoles('admin'), async (_req: Request, 
         enrollments,
         facilityAssets: assets,
         maintenanceTickets: tickets,
+        orientationRequests: orientations,
         userAccounts: exportedUsers,
         branding: branding?.value ?? null
       },

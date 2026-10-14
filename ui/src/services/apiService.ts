@@ -10,6 +10,7 @@ import type {
   Member,
   MembershipCancellationReason,
   MembershipFreezeReason,
+  OrientationRequest,
   StaffAccount,
   StudioDetails,
   LicenseConfig,
@@ -486,6 +487,44 @@ export const apiService = {
   async getMyWaitlistedClasses(): Promise<string[]> {
     const response = await apiFetch('/classes/waitlist/me', { signal: AbortSignal.timeout(3000) });
     return readResponse<string[]>(response);
+  },
+
+  async getMyOrientationRequests(): Promise<OrientationRequest[]> {
+    const response = await apiFetch('/orientations/me', { signal: AbortSignal.timeout(3000) });
+    return readResponse<OrientationRequest[]>(response);
+  },
+
+  async createOrientationRequest(input: { preferredDate: string; preferredTime: string; notes: string }): Promise<OrientationRequest> {
+    const response = await apiFetch('/orientations', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(input),
+      signal: AbortSignal.timeout(4000)
+    });
+    return readResponse<OrientationRequest>(response);
+  },
+
+  async cancelOrientationRequest(id: string): Promise<OrientationRequest> {
+    const response = await apiFetch(`/orientations/${encodeURIComponent(id)}`, {
+      method: 'DELETE',
+      signal: AbortSignal.timeout(4000)
+    });
+    return readResponse<OrientationRequest>(response);
+  },
+
+  async getOrientationRequests(): Promise<OrientationRequest[]> {
+    const response = await apiFetch('/orientations', { signal: AbortSignal.timeout(3000) });
+    return readResponse<OrientationRequest[]>(response);
+  },
+
+  async updateOrientationRequestStatus(id: string, status: 'confirmed' | 'declined'): Promise<OrientationRequest> {
+    const response = await apiFetch(`/orientations/${encodeURIComponent(id)}/status`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ status }),
+      signal: AbortSignal.timeout(4000)
+    });
+    return readResponse<OrientationRequest>(response);
   },
 
   async reviewMemberDuplicate(id: string, status: 'reviewed' | 'review_required'): Promise<Member> {

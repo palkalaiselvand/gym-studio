@@ -143,7 +143,7 @@ The diagnostics download does not currently package logs. Review and redact logs
 | Member capacity limit | Enforced for new enrollment, including concurrent requests, and demo seed reset; existing members are grandfathered after a lower-cap license import |
 | Studio capacity limit | Checked before inserting a studio record; multi-studio provisioning is not supported by the current single-studio API/data model |
 | Admin restriction while preserving member access/check-in | Implemented at authenticated admin write boundary, with safety/license-renewal exceptions |
-| White-label name/logo/color/currency | Existing admin configuration |
+| White-label name/logo/color/currency, theme, and font | Existing admin configuration |
 | Custom domain / customer mail and SMS delivery | Metadata only; DNS, outbound delivery, and provider integration remain unimplemented |
 | Manual backup/restore and update/rollback helpers | Implemented with integrity checks; scheduling and external storage are operator responsibilities |
 | Customer data export and sanitized diagnostics | Implemented; diagnostics do not bundle logs |

@@ -13,6 +13,7 @@ import authRouter from './routes/auth.js';
 import accessRouter from './routes/access.js';
 import facilityRouter from './routes/facility.js';
 import supportRouter from './routes/support.js';
+import orientationsRouter from './routes/orientations.js';
 import { processMembershipLifecycle } from './membershipLifecycle.js';
 
 const app = express();
@@ -56,6 +57,7 @@ app.use('/api/auth', authRouter);
 app.use('/api/access', accessRouter);
 app.use('/api/facility', facilityRouter);
 app.use('/api/support', supportRouter);
+app.use('/api/orientations', orientationsRouter);
 
 // 404 Handler
 app.use((_req, res) => {

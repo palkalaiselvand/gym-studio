@@ -9,7 +9,15 @@ import {
   isCalendarDate,
   reconcileMemberLifecycle
 } from '../membership.js';
-import { classBookingsDb, classesDb, enrollmentsDb, membersDb, sessionsDb, usersDb } from '../db.js';
+import {
+  classBookingsDb,
+  classesDb,
+  enrollmentsDb,
+  membersDb,
+  orientationRequestsDb,
+  sessionsDb,
+  usersDb
+} from '../db.js';
 import type {
   Member,
   MembershipCancellationReason,
@@ -640,6 +648,7 @@ router.delete('/:id', requireAuth, requireRoles('admin'), async (req: Request, r
     if (removedCount === 0) {
       return res.status(404).json({ success: false, error: `Member ${id} not found` });
     }
+    await orientationRequestsDb.removeAsync({ memberId: id }, { multi: true });
 
     const memberUser = await usersDb.findOneAsync({ memberId: id });
     if (memberUser) {

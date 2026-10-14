@@ -5,6 +5,8 @@ export interface Branding {
   tagline: string;
   logo: string | null;
   primaryColor: string;
+  theme: 'dark' | 'light';
+  fontFamily: 'modern' | 'system' | 'arial' | 'georgia';
   countryCode: string;
   currency: string;
   locale: string;
@@ -57,6 +59,8 @@ export const DEFAULT_BRANDING: Branding = {
   tagline: 'Gym & Athletic Club',
   logo: null,
   primaryColor: '#10b981',
+  theme: 'dark',
+  fontFamily: 'modern',
   countryCode: 'US',
   currency: 'USD',
   locale: 'en-US'
@@ -91,6 +95,14 @@ export function validateBranding(input: any): { value?: Branding; error?: string
   const primaryColor = typeof input.primaryColor === 'string' ? input.primaryColor.trim() : '';
   if (!HEX_COLOR.test(primaryColor)) return { error: 'Primary color must be a hex value like #10b981' };
 
+  const theme = input.theme ?? DEFAULT_BRANDING.theme;
+  if (theme !== 'dark' && theme !== 'light') return { error: 'Theme must be dark or light' };
+
+  const fontFamily = input.fontFamily ?? DEFAULT_BRANDING.fontFamily;
+  if (!['modern', 'system', 'arial', 'georgia'].includes(fontFamily)) {
+    return { error: 'Choose a supported font family' };
+  }
+
   const country = COUNTRIES.find((entry) => entry.code === input.countryCode);
   if (!country) return { error: 'Unsupported country code' };
 
@@ -108,6 +120,8 @@ export function validateBranding(input: any): { value?: Branding; error?: string
       tagline,
       logo,
       primaryColor: primaryColor.toLowerCase(),
+      theme,
+      fontFamily,
       countryCode: country.code,
       currency: country.currency,
       locale: country.locale

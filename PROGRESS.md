@@ -6,7 +6,7 @@ Roadmap source: [product requirement/07_iterative_implementation_roadmap.md](./p
 
 Stack: React/TS SPA (`ui/`), Express/TS API (`api/`), NeDB storage. Build with `npm run build:api` and `npm run build:ui`. Lint with `npm run lint --prefix ui`. There is no test runner; use isolated API smoke tests (temp `DATA_DIR`, `PORT=5150`, `ADMIN_EMAIL`, `ADMIN_PASSWORD`).
 
-Last updated: 2026-10-13 (Phase 5 complete; current Phase 6 SKU checks and member-cap enforcement added; productization exit criteria still outstanding)
+Last updated: 2026-10-13 (manual orientation request/confirmation workflow added; Phase 6 productization exit criteria remain outstanding)
 
 ## Decisions made
 
@@ -23,7 +23,7 @@ Last updated: 2026-10-13 (Phase 5 complete; current Phase 6 SKU checks and membe
 |-------|-------|--------|
 | 0 | Foundations, data model, infra-agnostic baseline | Not formally tracked; basic API/UI/DB exist |
 | 1 | Members enrollment and digital membership | Done, except payment (deferred) |
-| Branding (Epic 8.4 subset) | Admin-configurable name, logo, currency, primary color | Done (commit `9113ce9`) |
+| Branding (Epic 8.4 subset) | Admin-configurable name, logo, currency, primary color, theme, and font family | Done (commit `9113ce9`; theme/font added 2026-10-13) |
 | 2 | Membership lifecycle (non-payment scope) | Done: scheduled pause/resume, renewal-date plan changes, end-of-term cancellation, exit reasons, retention offers, and lifecycle metrics. Billing-dependent behavior deferred to Phase 7 |
 | 3 | Studio offerings, scheduling and retail | Done: waitlist enrollment, capacity promotion, and class scheduling affordances shipped |
 | 4 | Facility maintenance and IoT | Done: asset registry and maintenance ticket workflow shipped in the operating dashboard |
@@ -39,7 +39,8 @@ Last updated: 2026-10-13 (Phase 5 complete; current Phase 6 SKU checks and membe
 - Phase 4 (initial rollout): facility asset registry, maintenance ticket triage, and operations dashboard summary for asset health and outage tracking.
 - Phase 5 (initial rollout): cross-gym partner network, loyalty passport data, and local merchant-perk marketplace surfaced in the studio detail experience.
 - Phase 6 (initial rollout): single-host Docker Compose API/UI images with a prompted first-run installer and initial-admin bootstrap; Ed25519 offline-signed license generation/import and local signature verification; expired/unlicensed admin write restrictions with explicit access/check-in/facility/renewal exceptions; API feature checks for class booking, branding changes, and network-data edits; serialized member-cap reservations for new enrollment, seed-reset cap validation, and a studio-cap check before studio insertion; admin license status banner; hash-verified NeDB backup/restore and semantic-version image rebuild/rollback helpers; admin data export and sanitized runtime diagnostics; and a deployment runbook documenting limits and setup.
-- Branding: public `GET /api/branding`, admin-only validated `PUT /api/branding`, Branding panel on the admin dashboard, UI-wide name/logo/color/currency formatting, currency-aware contract text, and neutral sample branding defaults in API/UI/seed data.
+- Branding: public `GET /api/branding`, admin-only validated `PUT /api/branding`, Branding panel on the admin dashboard, UI-wide name/logo/color/currency formatting, currency-aware contract text, neutral sample branding defaults in API/UI/seed data, and saved dark/light theme plus font-family selection.
+- Orientation scheduling: members can submit one preferred date/time request at a time, view request history, and cancel pending requests; admin/staff can review, confirm, or decline requests. This is manual confirmation only—no calendar booking or outbound messaging is connected.
 
 ## Known gaps and next steps
 
@@ -47,13 +48,19 @@ Last updated: 2026-10-13 (Phase 5 complete; current Phase 6 SKU checks and membe
 2. Phase 6 still lacks Helm, Terraform, air-gapped image distribution, release registry/provenance and LTS policy, scheduled off-host backup, diagnostics log bundling, and formal support SLAs. The update helper rebuilds a checked-out source tree rather than consuming vendor-signed release artifacts.
 3. Phase 6 exit criteria remain open: Docker build/Compose clean-room validation, independent customer installation within two business days, independent rollback drill, sales-trial sign-off, and production sizing/DR exercises. Docker is unavailable in the current implementation environment; the Compose images were not built here.
 4. Phase 7 payment work: processor selection and tokenization, recurring charges, proration, smart payment dunning/retries, payment reconciliation, wallet-pass synchronization, and payment/settlement-dependent retail, network, family, and corporate workflows.
-5. Apple/Google Wallet pass issuance remains unimplemented; current access pass is a 30-second, single-use in-app QR. A wallet design must resolve how that rotating credential maps to wallet barcode refresh, signing credentials, revocation, and offline access before issuance is implemented. Freeze reminders are in-app only; email/SMS delivery is not configured. SMS/orientation automation, government-ID/selfie KYC, and legal review of the waiver also remain open.
-6. Branding follow-ups: no light theme or font choice; currency changes formatting only and does not convert prices. Generic fallback branding affects new/default installations and seed resets; it does not overwrite branding or studio records already persisted in a customer database.
+5. Wallet pass issuance remains unimplemented; the current access pass is a 30-second, single-use in-app QR. Apple/Google wallet implementation needs platform signing credentials and decisions about rotating barcodes, revocation, and offline access. Freeze-end reminders are displayed in-app; outbound email/SMS and the day-1/day-7/day-30 welcome journey need a selected delivery provider, credentials, and consent policy. Orientation requests are collected and manually confirmed in-app, but automated calendar booking and trainer-intro scheduling are not implemented. Government-ID/selfie verification and legal review of the waiver remain open; KYC and waiver approval require external provider/legal decisions.
+6. Currency changes formatting only and does not convert prices. Generic fallback branding affects new/default installations and seed resets; it does not overwrite branding or studio records already persisted in a customer database.
+
+## Scope note (2026-10-13)
+
+- The current follow-up request excludes payment, billing, authentication/authorization, and deployment readiness. The listed Phase 6 rollout/distribution gaps remain tracked but are not being implemented under that scope.
+- Non-payment product work completed in this session: customer-neutral sample studio defaults; configurable dark/light theme and font-family selection; member-submitted orientation preferences with manual staff confirmation.
+- Still actionable without excluded scope: the non-messaging remainder of the welcome journey, broader non-payment PRD gaps, and integration-neutral notification workflow design. Provider- or legal-dependent work (wallet issuance, outbound delivery, KYC, waiver approval) remains blocked pending credentials, platform/legal decisions, or review.
 
 ## Housekeeping
 
 - Login throttling is in-memory and IP-based.
-- `/api/seed/reset` re-seeds demo data and clears member accounts, bookings, enrollments and access passes. Branding is kept.
+- `/api/seed/reset` re-seeds demo data and clears member accounts, bookings, enrollments, access passes, and orientation requests. Branding is kept.
 
 ## Verification (2026-10-13)
 
@@ -61,6 +68,8 @@ Last updated: 2026-10-13 (Phase 5 complete; current Phase 6 SKU checks and membe
 - Isolated capacity smoke passed: SKU feature ceilings are applied, concurrent member reservations cannot exceed the configured cap, rejected attempts do not consume a slot, and released slots can be reserved.
 - Isolated API smokes passed: non-entitled branding/network writes, over-cap enrollment before any member/account write, and a seed reset exceeding the member cap are rejected; existing member data and facility safety reads remain available.
 - Sample branding defaults were made customer-neutral; API/UI builds passed, studio seed JSON parses, and the former Apex branding is absent from API/UI defaults and demo studio data.
+- Branding supports validated, persisted dark/light theme and font family preferences with UI-wide CSS application; API and UI production builds passed.
+- Manual orientation requests passed API/UI builds and lint; isolated API smoke passed for auth boundaries, past-date rejection, single-pending-request enforcement under concurrent submissions, member cancellation, staff confirmation, and member-owned request visibility. Orientation records are included in admin export and are removed on member deletion and demo reset.
 
 ## Prior verification (2026-10-12)
 

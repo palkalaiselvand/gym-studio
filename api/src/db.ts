@@ -77,6 +77,11 @@ export const maintenanceTicketsDb: any = new Datastore({
   autoload: true
 });
 
+export const orientationRequestsDb: any = new Datastore({
+  filename: path.join(DATA_DIR, 'orientation-requests.db'),
+  autoload: true
+});
+
 export async function initDb(): Promise<void> {
   // Ensure indexes for fast document queries
   await membersDb.ensureIndexAsync({ fieldName: 'id', unique: true });
@@ -97,6 +102,8 @@ export async function initDb(): Promise<void> {
   await facilityAssetsDb.ensureIndexAsync({ fieldName: 'tagCode', unique: true });
   await maintenanceTicketsDb.ensureIndexAsync({ fieldName: 'id', unique: true });
   await maintenanceTicketsDb.ensureIndexAsync({ fieldName: 'assetId' });
+  await orientationRequestsDb.ensureIndexAsync({ fieldName: 'id', unique: true });
+  await orientationRequestsDb.ensureIndexAsync({ fieldName: 'memberId' });
 
   const adminEmail = process.env.ADMIN_EMAIL?.trim().toLowerCase();
   const adminPassword = process.env.ADMIN_PASSWORD;
@@ -193,6 +200,7 @@ export async function resetDb(): Promise<void> {
   await classBookingsDb.removeAsync({}, { multi: true });
   await classWaitlistDb.removeAsync({}, { multi: true });
   await accessPassesDb.removeAsync({}, { multi: true });
+  await orientationRequestsDb.removeAsync({}, { multi: true });
   await facilityAssetsDb.removeAsync({}, { multi: true });
   await maintenanceTicketsDb.removeAsync({}, { multi: true });
   await configDb.removeAsync({ key: 'access-pass-signing-key' }, {});

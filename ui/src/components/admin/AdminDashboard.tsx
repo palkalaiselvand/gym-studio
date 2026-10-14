@@ -18,6 +18,7 @@ import { MemberDeleteModal } from './MemberDeleteModal';
 import { TeamAccessPanel } from './TeamAccessPanel';
 import { BrandingPanel } from './BrandingPanel';
 import { FacilityOperationsPanel } from './FacilityOperationsPanel';
+import { OrientationRequestsPanel } from './OrientationRequestsPanel';
 import { useBranding } from '../../branding/branding';
 
 interface AdminDashboardProps {
@@ -263,6 +264,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
       <StatsOverview members={members} />
 
       <FacilityOperationsPanel assets={facilityAssets} tickets={maintenanceTickets} />
+      {canManageMembers && <OrientationRequestsPanel onToast={onToast} />}
 
       {/* Filter and Search Bar */}
       <div className="glass-panel filter-bar">

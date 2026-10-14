@@ -119,11 +119,30 @@ export interface Member {
   };
 }
 
+export type OrientationRequestStatus = 'pending' | 'confirmed' | 'declined' | 'cancelled';
+
+export interface OrientationRequest {
+  id: string;
+  memberId: string;
+  memberName: string;
+  memberEmail: string;
+  preferredDate: string;
+  preferredTime: string;
+  notes: string;
+  status: OrientationRequestStatus;
+  createdAt: string;
+  updatedAt: string;
+  confirmedAt?: string;
+  confirmedBy?: string;
+}
+
 export interface Branding {
   name: string;
   tagline: string;
   logo: string | null;
   primaryColor: string;
+  theme: 'dark' | 'light';
+  fontFamily: 'modern' | 'system' | 'arial' | 'georgia';
   countryCode: string;
   currency: string;
   locale: string;

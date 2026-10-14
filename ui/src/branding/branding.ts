@@ -48,6 +48,8 @@ export const DEFAULT_BRANDING: Branding = {
   tagline: 'Gym & Athletic Club',
   logo: null,
   primaryColor: '#10b981',
+  theme: 'dark',
+  fontFamily: 'modern',
   countryCode: 'US',
   currency: 'USD',
   locale: 'en-US'
@@ -73,6 +75,27 @@ export function applyBranding(branding: Branding): void {
   root.style.setProperty('--accent-primary', hex);
   root.style.setProperty('--accent-primary-hover', `#${darker}`);
   root.style.setProperty('--accent-rgb', `${r}, ${g}, ${b}`);
+  root.dataset.theme = branding.theme;
+  const fontStacks = {
+    modern: {
+      main: "'Plus Jakarta Sans', system-ui, -apple-system, sans-serif",
+      heading: "'Space Grotesk', system-ui, sans-serif"
+    },
+    system: {
+      main: "system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
+      heading: "system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif"
+    },
+    arial: {
+      main: "Arial, Helvetica, sans-serif",
+      heading: "Arial, Helvetica, sans-serif"
+    },
+    georgia: {
+      main: "Georgia, 'Times New Roman', serif",
+      heading: "Georgia, 'Times New Roman', serif"
+    }
+  } as const;
+  root.style.setProperty('--font-main', fontStacks[branding.fontFamily].main);
+  root.style.setProperty('--font-heading', fontStacks[branding.fontFamily].heading);
   document.title = `${branding.name} - Membership Management`;
   let favicon = document.querySelector<HTMLLinkElement>('link[rel~="icon"]');
   if (branding.logo) {

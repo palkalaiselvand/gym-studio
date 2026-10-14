@@ -1,6 +1,7 @@
 ﻿@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=Space+Grotesk:wght@500;700&family=JetBrains+Mono:wght@400;500&display=swap');
 
 :root {
+  color-scheme: dark;
   --font-main: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
   --font-heading: 'Space Grotesk', system-ui, sans-serif;
   --font-mono: 'JetBrains Mono', monospace;
@@ -12,6 +13,12 @@
   --bg-card: rgba(17, 24, 39, 0.75);
   --bg-card-hover: rgba(31, 41, 55, 0.85);
   --bg-glass: rgba(15, 23, 42, 0.65);
+  --bg-header: rgba(11, 15, 25, 0.85);
+  --bg-table-header: rgba(17, 24, 39, 0.95);
+  --bg-modal: #111827;
+  --bg-modal-footer: rgba(0, 0, 0, 0.2);
+  --bg-modal-overlay: rgba(0, 0, 0, 0.75);
+  --bg-toast: #1f2937;
 
   --border-subtle: #1f2937;
   --border-light: #374151;
@@ -20,6 +27,7 @@
   --text-main: #f9fafb;
   --text-secondary: #9ca3af;
   --text-muted: #6b7280;
+  --text-on-accent: #0b0f19;
 
   --accent-primary: #10b981;
   --accent-primary-hover: #059669;
@@ -121,7 +129,7 @@ button, input, select, textarea {
 }
 
 .glass-panel:hover {
-  border-color: rgba(255, 255, 255, 0.1);
+  border-color: var(--border-light);
 }
 
 /* Header */
@@ -129,7 +137,7 @@ button, input, select, textarea {
   position: sticky;
   top: 0;
   z-index: 40;
-  background: rgba(11, 15, 25, 0.85);
+  background: var(--bg-header);
   backdrop-filter: blur(16px);
   -webkit-backdrop-filter: blur(16px);
   border-bottom: 1px solid var(--border-subtle);
@@ -162,7 +170,7 @@ button, input, select, textarea {
   display: flex;
   align-items: center;
   justify-content: center;
-  color: #0b0f19;
+  color: var(--text-on-accent);
   box-shadow: 0 0 15px rgba(var(--accent-rgb), 0.4);
 }
 
@@ -171,7 +179,7 @@ button, input, select, textarea {
   font-size: 1.25rem;
   font-weight: 800;
   letter-spacing: -0.01em;
-  color: #ffffff;
+  color: var(--text-main);
   display: flex;
   flex-direction: column;
   line-height: 1.1;
@@ -219,7 +227,7 @@ button, input, select, textarea {
 
 .role-pill-btn.active {
   background: var(--accent-primary);
-  color: #0b0f19;
+  color: var(--text-on-accent);
   box-shadow: 0 2px 8px rgba(var(--accent-rgb), 0.35);
 }
 
@@ -398,8 +406,8 @@ button, input, select, textarea {
 }
 
 .btn-secondary:hover {
-  background: #374151;
-  border-color: #4b5563;
+  background: var(--bg-secondary);
+  border-color: var(--border-light);
 }
 
 .btn-danger {
@@ -606,7 +614,7 @@ button, input, select, textarea {
 }
 
 .members-table th {
-  background: rgba(17, 24, 39, 0.95);
+  background: var(--bg-table-header);
   color: var(--text-secondary);
   font-weight: 600;
   text-transform: uppercase;
@@ -619,12 +627,12 @@ button, input, select, textarea {
 
 .members-table td {
   padding: 1.1rem 1.25rem;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+  border-bottom: 1px solid var(--border-subtle);
   vertical-align: middle;
 }
 
 .members-table tr:hover td {
-  background: rgba(255, 255, 255, 0.02);
+  background: var(--bg-card-hover);
 }
 
 .member-cell {
@@ -684,7 +692,7 @@ button, input, select, textarea {
 .modal-backdrop {
   position: fixed;
   inset: 0;
-  background: rgba(0, 0, 0, 0.75);
+  background: var(--bg-modal-overlay);
   backdrop-filter: blur(8px);
   -webkit-backdrop-filter: blur(8px);
   display: flex;
@@ -696,7 +704,7 @@ button, input, select, textarea {
 }
 
 .modal-dialog {
-  background: #111827;
+  background: var(--bg-modal);
   border: 1px solid var(--border-light);
   border-radius: var(--radius-xl);
   width: 100%;
@@ -732,7 +740,7 @@ button, input, select, textarea {
   justify-content: flex-end;
   gap: 0.75rem;
   border-top: 1px solid var(--border-subtle);
-  background: rgba(0, 0, 0, 0.2);
+  background: var(--bg-modal-footer);
 }
 
 /* Form Controls */
@@ -1354,7 +1362,7 @@ button, input, select, textarea {
 
 .toast-item {
   pointer-events: auto;
-  background: #1f2937;
+  background: var(--bg-toast);
   border: 1px solid var(--border-light);
   border-radius: var(--radius-md);
   padding: 1rem;
@@ -1369,6 +1377,53 @@ button, input, select, textarea {
 .toast-item.info { border-left: 4px solid var(--accent-cyan); }
 .toast-item.warning { border-left: 4px solid var(--accent-amber); }
 .toast-item.error { border-left: 4px solid var(--accent-rose); }
+
+:root[data-theme='light'] {
+  color-scheme: light;
+  --bg-primary: #f4f7f8;
+  --bg-secondary: #ffffff;
+  --bg-tertiary: #e8eef0;
+  --bg-card: rgba(255, 255, 255, 0.9);
+  --bg-card-hover: rgba(15, 23, 42, 0.045);
+  --bg-glass: rgba(255, 255, 255, 0.85);
+  --bg-header: rgba(255, 255, 255, 0.92);
+  --bg-table-header: #edf2f4;
+  --bg-modal: #ffffff;
+  --bg-modal-footer: #f4f7f8;
+  --bg-modal-overlay: rgba(15, 23, 42, 0.45);
+  --bg-toast: #ffffff;
+  --border-subtle: #d9e1e5;
+  --border-light: #c4d0d6;
+  --text-main: #17232b;
+  --text-secondary: #465660;
+  --text-muted: #63737d;
+  --text-on-accent: #10201a;
+  --shadow-sm: 0 1px 2px 0 rgba(15, 23, 42, 0.08);
+  --shadow-md: 0 4px 8px -2px rgba(15, 23, 42, 0.12);
+  --shadow-lg: 0 12px 24px -8px rgba(15, 23, 42, 0.2);
+  --shadow-glow: 0 0 16px rgba(var(--accent-rgb), 0.14);
+}
+
+:root[data-theme='light'] body {
+  background-image:
+    radial-gradient(circle at 15% 10%, rgba(var(--accent-rgb), 0.06) 0%, transparent 40%),
+    radial-gradient(circle at 85% 80%, rgba(139, 92, 246, 0.04) 0%, transparent 40%);
+}
+
+:root[data-theme='light'] .badge-status-active { color: #047857; }
+:root[data-theme='light'] .badge-status-pending,
+:root[data-theme='light'] .badge-tier-Gold { color: #92400e; }
+:root[data-theme='light'] .badge-status-expired,
+:root[data-theme='light'] .badge-pay-overdue { color: #be123c; }
+:root[data-theme='light'] .badge-status-suspended,
+:root[data-theme='light'] .badge-tier-Silver { color: #475569; }
+:root[data-theme='light'] .badge-tier-Basic { color: #0369a1; }
+:root[data-theme='light'] .badge-tier-Platinum { color: #6d28d9; }
+:root[data-theme='light'] .badge-tier-VIP { color: #be185d; }
+:root[data-theme='light'] .enrollment-notice { color: #0e7490; }
+:root[data-theme='light'] .enrollment-notice-warning { color: #92400e; }
+:root[data-theme='light'] .enrollment-error { color: #9f1239; }
+:root[data-theme='light'] .enrollment-legal-note { color: #92400e !important; }
 
 /* Animations */
 @keyframes fadeIn {

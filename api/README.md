@@ -33,7 +33,14 @@ Members can list, reserve, and cancel their own class bookings. Booking requires
 
 `GET /api/access/pass` issues a 30-second HMAC-signed token only to an active, paid member. `POST /api/access/verify` is restricted to authenticated admin/staff access readers, checks the token's signature, expiry, studio, current membership status, and one-time use, then records the check-in. It is an in-app QR token, not an Apple/Google Wallet pass; scanner hardware integration is not included.
 
-The sample waiver requires legal review. SMS onboarding, orientation scheduling, native wallet providers, and payment require external services and are not configured. Use the root README for prototype limitations and local setup.
+The sample waiver requires legal review. SMS onboarding, automated calendar booking, trainer-intro scheduling, native wallet providers, and payment require external services and are not configured. Use the root README for prototype limitations and local setup.
+
+## Orientation requests
+
+- Members use `GET /api/orientations/me` to view their own requests, `POST /api/orientations` to submit a preferred date/time with an optional note (up to 300 characters), and `DELETE /api/orientations/:id` to cancel a pending request.
+- Admin/staff use `GET /api/orientations` to review requests and `PATCH /api/orientations/:id/status` with `confirmed` or `declined` to record a manual decision. A member may have only one pending request at a time.
+
+Submitting a preference does not book a calendar slot or send a notification. Staff confirmation is handled in the admin dashboard; displayed times are studio-local preferences and staff must follow up through existing channels.
 
 ## License and support operations (Phase 6)
 
@@ -51,4 +58,4 @@ From the repository root, run `npm run dev:api` or `npm run build:api`.
 
 ## Branding and localization
 
-GET /api/branding is public so sign-in and enrollment can be themed; PUT /api/branding is admin-only (CSRF-protected) and validates the studio name, tagline, primary color (hex), country code and logo (PNG/JPEG/WebP/SVG data URL, about 130 KB max). Currency and locale are derived from the country code from a fixed list. Currency changes formatting only; stored prices are not converted. Settings persist in config.db and survive demo-data resets.
+GET /api/branding is public so sign-in and enrollment can be themed; PUT /api/branding is admin-only (CSRF-protected) and validates the studio name, tagline, primary color (hex), country code, logo (PNG/JPEG/WebP/SVG data URL, about 130 KB max), dark/light theme, and font family. Currency and locale are derived from the country code from a fixed list. Currency changes formatting only; stored prices are not converted. Settings persist in config.db and survive demo-data resets.

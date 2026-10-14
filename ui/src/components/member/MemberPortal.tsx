@@ -22,6 +22,7 @@ import { StudioDetailsView } from './StudioDetailsView';
 import { ClassScheduleView } from './ClassScheduleView';
 import { EditProfileModal } from './EditProfileModal';
 import { MembershipLifecyclePanel } from './MembershipLifecyclePanel';
+import { OrientationRequestPanel } from './OrientationRequestPanel';
 import { TIER_CONFIG } from '../../data/mockData';
 import { apiService } from '../../services/apiService';
 import { hasStudioAccess } from '../../utils/membership';
@@ -42,7 +43,7 @@ export const MemberPortal: React.FC<MemberPortalProps> = ({
   onToast
 }) => {
   const { money } = useBranding();
-  const [activeTab, setActiveTab] = useState<'profile' | 'studio' | 'classes' | 'rules'>('profile');
+  const [activeTab, setActiveTab] = useState<'profile' | 'studio' | 'classes' | 'orientation' | 'rules'>('profile');
   const [isEditProfileOpen, setIsEditProfileOpen] = useState(false);
   const [bookedClassIds, setBookedClassIds] = useState<string[]>([]);
   const [waitlistedClassIds, setWaitlistedClassIds] = useState<string[]>([]);
@@ -164,6 +165,14 @@ export const MemberPortal: React.FC<MemberPortalProps> = ({
         >
           <Calendar size={18} />
           <span>Class Schedule & Booking</span>
+        </button>
+
+        <button
+          className={`tab-btn ${activeTab === 'orientation' ? 'active' : ''}`}
+          onClick={() => setActiveTab('orientation')}
+        >
+          <Clock size={18} />
+          <span>Orientation</span>
         </button>
 
         <button
@@ -462,6 +471,10 @@ export const MemberPortal: React.FC<MemberPortalProps> = ({
             onLeaveWaitlist={handleLeaveWaitlist}
           />
         </div>
+      )}
+
+      {activeTab === 'orientation' && (
+        <OrientationRequestPanel memberId={member.id} onToast={onToast} />
       )}
 
       {/* Tab 4: Rules & Etiquette */}
