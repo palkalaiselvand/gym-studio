@@ -1,6 +1,6 @@
 import { Router, Request, Response } from 'express';
 import { configDb } from '../db.js';
-import { requireAuth, requireRoles } from '../auth.js';
+import { requireAuth, requireLicenseFeature, requireRoles } from '../auth.js';
 import { getBranding, validateBranding } from '../branding.js';
 
 const router = Router();
@@ -14,7 +14,7 @@ router.get('/', async (_req: Request, res: Response) => {
   }
 });
 
-router.put('/', requireAuth, requireRoles('admin'), async (req: Request, res: Response) => {
+router.put('/', requireAuth, requireRoles('admin'), requireLicenseFeature('brand-customization'), async (req: Request, res: Response) => {
   try {
     const { value, error } = validateBranding(req.body);
     if (!value) return res.status(400).json({ success: false, error });

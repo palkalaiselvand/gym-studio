@@ -2,7 +2,7 @@ import { Router, Request, Response } from 'express';
 import { randomUUID } from 'node:crypto';
 import { hasStudioAccess } from '../membership.js';
 import { classBookingsDb, classWaitlistDb, classesDb, membersDb } from '../db.js';
-import { requireAuth, requireRoles } from '../auth.js';
+import { requireAuth, requireLicenseFeature, requireRoles } from '../auth.js';
 
 const router = Router();
 
@@ -138,7 +138,7 @@ router.get('/:id/waitlist', requireAuth, async (req: Request, res: Response) => 
   }
 });
 
-router.post('/:id/waitlist', requireAuth, requireRoles('member'), async (req: Request, res: Response) => {
+router.post('/:id/waitlist', requireAuth, requireRoles('member'), requireLicenseFeature('class-booking'), async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
     const cls = await classesDb.findOneAsync({ id });
@@ -225,7 +225,7 @@ router.delete('/:id/waitlist', requireAuth, requireRoles('member'), async (req: 
 });
 
 // POST /api/classes/:id/book - Reserve spot in a class
-router.post('/:id/book', requireAuth, requireRoles('member'), async (req: Request, res: Response) => {
+router.post('/:id/book', requireAuth, requireRoles('member'), requireLicenseFeature('class-booking'), async (req: Request, res: Response) => {
   let insertedBookingId: string | undefined;
   let reservedSpot = false;
   try {

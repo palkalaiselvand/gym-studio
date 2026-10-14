@@ -6,7 +6,7 @@ Roadmap source: [product requirement/07_iterative_implementation_roadmap.md](./p
 
 Stack: React/TS SPA (`ui/`), Express/TS API (`api/`), NeDB storage. Build with `npm run build:api` and `npm run build:ui`. Lint with `npm run lint --prefix ui`. There is no test runner; use isolated API smoke tests (temp `DATA_DIR`, `PORT=5150`, `ADMIN_EMAIL`, `ADMIN_PASSWORD`).
 
-Last updated: 2026-10-12 (Phase 5 complete; Phase 6 self-hosting and operational foundations added, with productization exit criteria still outstanding)
+Last updated: 2026-10-13 (Phase 5 complete; current Phase 6 SKU checks and member-cap enforcement added; productization exit criteria still outstanding)
 
 ## Decisions made
 
@@ -15,6 +15,7 @@ Last updated: 2026-10-12 (Phase 5 complete; Phase 6 self-hosting and operational
 - Membership pause, scheduled plan changes, cancellation requests, and retention offers are lifecycle records only; the app does not collect payment data or process charges/refunds.
 - Authentication is database-driven (scrypt passwords, HttpOnly cookie sessions, CSRF token). There is no external identity provider.
 - Roles: admin, staff, franchise-owner, member.
+- License reductions grandfather existing records and deny operations that add licensed usage after the cap is reached.
 
 ## Phase status
 
@@ -37,12 +38,12 @@ Last updated: 2026-10-12 (Phase 5 complete; Phase 6 self-hosting and operational
 - Phase 3 (initial rollout): class waitlist registration, automatic waitlist promotion on cancellations, and UI affordances for full-class enrollment.
 - Phase 4 (initial rollout): facility asset registry, maintenance ticket triage, and operations dashboard summary for asset health and outage tracking.
 - Phase 5 (initial rollout): cross-gym partner network, loyalty passport data, and local merchant-perk marketplace surfaced in the studio detail experience.
-- Phase 6 (initial rollout): single-host Docker Compose API/UI images with a prompted first-run installer and initial-admin bootstrap; Ed25519 offline-signed license generation/import and local signature verification; expired/unlicensed admin write restrictions with explicit access/check-in/facility/renewal exceptions; admin license status banner; hash-verified NeDB backup/restore and semantic-version image rebuild/rollback helpers; admin data export and sanitized runtime diagnostics; and a deployment runbook documenting limits and setup.
+- Phase 6 (initial rollout): single-host Docker Compose API/UI images with a prompted first-run installer and initial-admin bootstrap; Ed25519 offline-signed license generation/import and local signature verification; expired/unlicensed admin write restrictions with explicit access/check-in/facility/renewal exceptions; API feature checks for class booking, branding changes, and network-data edits; serialized member-cap reservations for new enrollment, seed-reset cap validation, and a studio-cap check before studio insertion; admin license status banner; hash-verified NeDB backup/restore and semantic-version image rebuild/rollback helpers; admin data export and sanitized runtime diagnostics; and a deployment runbook documenting limits and setup.
 - Branding: public `GET /api/branding`, admin-only validated `PUT /api/branding`, Branding panel on the admin dashboard, UI-wide name/logo/color/currency formatting, currency-aware contract text.
 
 ## Known gaps and next steps
 
-1. Phase 6 license SKU feature flags and studio/member capacity limits are not enforced throughout all API entry points; mail/SMS/domain metadata is not wired to DNS or a delivery provider.
+1. Phase 6 feature enforcement covers only current class-booking, branding, and network-data write surfaces; there is no UI-wide feature gate, no current API surface for `advanced-admin`/`support-portal`, and safety/maintenance workflows remain intentionally available. Member enrollment and seed-reset caps are enforced; studio caps are only checked when inserting the single studio record supported by the current data model. Mail/SMS/domain metadata is not wired to DNS or a delivery provider.
 2. Phase 6 still lacks Helm, Terraform, air-gapped image distribution, release registry/provenance and LTS policy, scheduled off-host backup, diagnostics log bundling, and formal support SLAs. The update helper rebuilds a checked-out source tree rather than consuming vendor-signed release artifacts.
 3. Phase 6 exit criteria remain open: Docker build/Compose clean-room validation, independent customer installation within two business days, independent rollback drill, sales-trial sign-off, and production sizing/DR exercises. Docker is unavailable in the current implementation environment; the Compose images were not built here.
 4. Phase 7 payment work: processor selection and tokenization, recurring charges, proration, smart payment dunning/retries, payment reconciliation, wallet-pass synchronization, and payment/settlement-dependent retail, network, family, and corporate workflows.
@@ -54,7 +55,13 @@ Last updated: 2026-10-12 (Phase 5 complete; Phase 6 self-hosting and operational
 - Login throttling is in-memory and IP-based.
 - `/api/seed/reset` re-seeds demo data and clears member accounts, bookings, enrollments and access passes. Branding is kept.
 
-## Verification (2026-10-12)
+## Verification (2026-10-13)
+
+- `npm run build:api` passed after the entitlement changes.
+- Isolated capacity smoke passed: SKU feature ceilings are applied, concurrent member reservations cannot exceed the configured cap, rejected attempts do not consume a slot, and released slots can be reserved.
+- Isolated API smokes passed: non-entitled branding/network writes, over-cap enrollment before any member/account write, and a seed reset exceeding the member cap are rejected; existing member data and facility safety reads remain available.
+
+## Prior verification (2026-10-12)
 
 - `npm run build` passed for API and UI.
 - `npm run lint --prefix ui` passed with existing purity/state-in-effect warnings; no lint errors.

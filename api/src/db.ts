@@ -172,6 +172,21 @@ export async function seedDefaultData(): Promise<void> {
   }
 }
 
+export function getDefaultSeedCounts(): { members: number; studios: number } {
+  const membersSeedPath = path.join(SEEDS_DIR, 'members.json');
+  const studioSeedPath = path.join(SEEDS_DIR, 'studio.json');
+  const members: unknown = fs.existsSync(membersSeedPath)
+    ? JSON.parse(fs.readFileSync(membersSeedPath, 'utf-8'))
+    : [];
+  if (!Array.isArray(members)) {
+    throw new Error('The default member seed must be a JSON array.');
+  }
+  return {
+    members: members.length,
+    studios: fs.existsSync(studioSeedPath) ? 1 : 0
+  };
+}
+
 export async function resetDb(): Promise<void> {
   await seedDefaultData();
   await enrollmentsDb.removeAsync({}, { multi: true });

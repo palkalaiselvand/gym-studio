@@ -3,6 +3,7 @@ import { Router, type Request, type Response } from 'express';
 import { enrollmentsDb, membersDb, usersDb } from '../db.js';
 import { createMemberAccount, optionalAuth, startSession } from '../auth.js';
 import { formatMoney, getBranding } from '../branding.js';
+import { reserveMemberCapacity } from '../license.js';
 import type { Member, MembershipTier } from '../types.js';
 
 const router = Router();
@@ -243,9 +244,28 @@ router.post('/', optionalAuth, async (req: Request, res: Response) => {
       }
     };
 
-    const userId = await createMemberAccount(normalizedEmail, password, memberId);
+    let releaseMemberCapacity: (() => void) | null;
     try {
+      releaseMemberCapacity = await reserveMemberCapacity();
+    } catch (error) {
+      console.error('Unable to verify member capacity before enrollment', error);
+      return res.status(503).json({
+        success: false,
+        error: 'The deployment license could not be verified; retry after the license configuration is checked.'
+      });
+    }
+    if (!releaseMemberCapacity) {
+      return res.status(403).json({
+        success: false,
+        error: 'The deployment has reached its licensed member limit. Contact the deployment administrator.'
+      });
+    }
+
+    let userId = '';
+    try {
+      userId = await createMemberAccount(normalizedEmail, password, memberId);
       await membersDb.insertAsync(member);
+      releaseMemberCapacity();
       await enrollmentsDb.insertAsync({
         id,
         memberId,
@@ -283,9 +303,10 @@ router.post('/', optionalAuth, async (req: Request, res: Response) => {
         createdAt: signedAt
       });
     } catch (error) {
+      releaseMemberCapacity();
       await membersDb.removeAsync({ id: memberId }, {});
       await enrollmentsDb.removeAsync({ id }, {});
-      await usersDb.removeAsync({ id: userId }, {});
+      if (userId) await usersDb.removeAsync({ id: userId }, {});
       throw error;
     }
 

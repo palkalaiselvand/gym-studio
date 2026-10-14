@@ -6,7 +6,7 @@ import {
 } from 'node:crypto';
 import type { NextFunction, Request, Response } from 'express';
 import { sessionsDb, usersDb } from './db.js';
-import { getLicense, type LicenseConfig } from './license.js';
+import { getLicense, type LicenseConfig, type LicenseFeature } from './license.js';
 
 function deriveKey(password: string, salt: Buffer, keyLength: number): Promise<Buffer> {
   return new Promise((resolve, reject) => {
@@ -192,6 +192,28 @@ export async function requireAuth(req: Request, res: Response, next: NextFunctio
   } catch (error) {
     next(error);
   }
+}
+
+export function requireLicenseFeature(feature: LicenseFeature) {
+  return async (_req: Request, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      const license = await getLicense();
+      if (!license.features.includes(feature)) {
+        res.status(403).json({
+          success: false,
+          error: `This feature is not included in the deployment's ${license.sku} license.`
+        });
+        return;
+      }
+      next();
+    } catch (error) {
+      console.error(`Unable to verify deployment license for feature ${feature}`, error);
+      res.status(503).json({
+        success: false,
+        error: 'The deployment license could not be verified; retry after the license configuration is checked.'
+      });
+    }
+  };
 }
 
 export function optionalAuth(req: Request, res: Response, next: NextFunction): void {

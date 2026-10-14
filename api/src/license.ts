@@ -1,8 +1,16 @@
 import { createPublicKey, verify } from 'node:crypto';
-import { configDb } from './db.js';
+import { configDb, membersDb, studioDb } from './db.js';
 
 export type LicenseSku = 'STARTER' | 'GROWTH' | 'ENTERPRISE';
 export type LicenseState = 'active' | 'trial' | 'grace-period' | 'expired' | 'unlicensed';
+export type LicenseFeature =
+  | 'member-directory'
+  | 'class-booking'
+  | 'facility-ops'
+  | 'brand-customization'
+  | 'network-roaming'
+  | 'advanced-admin'
+  | 'support-portal';
 
 export interface LicenseConfig {
   licenseId: string;
@@ -39,18 +47,19 @@ export const DEFAULT_LICENSE: LicenseConfig = {
   features: [
     'member-directory',
     'class-booking',
-    'facility-ops',
     'brand-customization'
   ],
   customDomain: null,
   emailFrom: 'hello@apexstudio.fit'
 };
 
-const SKU_FEATURES: Record<LicenseSku, string[]> = {
+const SKU_FEATURES: Record<LicenseSku, LicenseFeature[]> = {
   STARTER: ['member-directory', 'class-booking', 'brand-customization'],
   GROWTH: ['member-directory', 'class-booking', 'facility-ops', 'brand-customization', 'network-roaming'],
   ENTERPRISE: ['member-directory', 'class-booking', 'facility-ops', 'brand-customization', 'network-roaming', 'advanced-admin', 'support-portal']
 };
+
+const LICENSE_FEATURES = new Set<LicenseFeature>(Object.values(SKU_FEATURES).flat());
 
 const SKU_LIMITS: Record<LicenseSku, { maxStudios: number; maxMembers: number }> = {
   STARTER: { maxStudios: 1, maxMembers: 500 },
@@ -66,6 +75,58 @@ function toDate(value: string | null | undefined): Date | null {
   if (!value) return null;
   const date = new Date(value);
   return Number.isNaN(date.getTime()) ? null : date;
+}
+
+let capacityLock: Promise<void> = Promise.resolve();
+let reservedMemberSlots = 0;
+let reservedStudioSlots = 0;
+
+async function withCapacityLock<T>(operation: () => Promise<T>): Promise<T> {
+  const previous = capacityLock;
+  let release!: () => void;
+  capacityLock = new Promise<void>((resolve) => {
+    release = resolve;
+  });
+  await previous;
+  try {
+    return await operation();
+  } finally {
+    release();
+  }
+}
+
+async function reserveCapacity(
+  resource: 'member' | 'studio'
+): Promise<(() => void) | null> {
+  return withCapacityLock(async () => {
+    const license = await getLicense();
+    const [members, studios] = await Promise.all([
+      resource === 'member' ? membersDb.countAsync({}) : Promise.resolve(0),
+      resource === 'studio' ? studioDb.countAsync({}) : Promise.resolve(0)
+    ]);
+    const reserved = resource === 'member' ? reservedMemberSlots : reservedStudioSlots;
+    const limit = resource === 'member' ? license.maxMembers : license.maxStudios;
+    if ((resource === 'member' ? members : studios) + reserved >= limit) return null;
+
+    if (resource === 'member') reservedMemberSlots += 1;
+    else reservedStudioSlots += 1;
+
+    let released = false;
+    return () => {
+      if (released) return;
+      released = true;
+      if (resource === 'member') reservedMemberSlots -= 1;
+      else reservedStudioSlots -= 1;
+    };
+  });
+}
+
+export function reserveMemberCapacity(): Promise<(() => void) | null> {
+  return reserveCapacity('member');
+}
+
+export function reserveStudioCapacity(): Promise<(() => void) | null> {
+  return reserveCapacity('studio');
 }
 
 export function canonicalLicensePayload(payload: LicensePayload): string {
@@ -125,9 +186,12 @@ export function validateLicensePayload(input: unknown): LicensePayload {
     throw new Error('License capacity values must be positive integers.');
   }
   if (!Array.isArray(features) || features.length === 0 ||
-    features.some((feature) => typeof feature !== 'string' || !feature.trim()) ||
+    features.some((feature) => typeof feature !== 'string' || !LICENSE_FEATURES.has(feature as LicenseFeature)) ||
     new Set(features).size !== features.length) {
-    throw new Error('Features must be a non-empty list of unique strings.');
+    throw new Error('Features must be a non-empty list of unique supported feature names.');
+  }
+  if (features.some((feature) => !SKU_FEATURES[sku].includes(feature as LicenseFeature))) {
+    throw new Error(`The ${sku} SKU cannot include features outside its entitlement tier.`);
   }
   if (customDomain !== null && (typeof customDomain !== 'string' || customDomain.length > 253)) {
     throw new Error('Custom domain must be a valid domain name or null.');
@@ -198,9 +262,12 @@ export function evaluateLicense(input: Partial<LicenseConfig> | null | undefined
   const graceDays = Number.isFinite(baseline.gracePeriodDays)
     ? Math.max(0, Math.min(30, Number(baseline.gracePeriodDays)))
     : DEFAULT_LICENSE.gracePeriodDays;
-  const features = Array.isArray(baseline.features) && baseline.features.length > 0
+  const requestedFeatures = Array.isArray(baseline.features) && baseline.features.length > 0
     ? baseline.features
     : SKU_FEATURES[sku];
+  const features = requestedFeatures.filter((feature): feature is LicenseFeature =>
+    LICENSE_FEATURES.has(feature as LicenseFeature) && SKU_FEATURES[sku].includes(feature as LicenseFeature)
+  );
   const limits = SKU_LIMITS[sku];
 
   let status: LicenseState = 'active';

@@ -71,7 +71,9 @@ The customer admin signs into the app, opens **Branding & localization**, and im
 
 The service derives active, grace-period, and expired state from the signed dates. An expired or missing license blocks admin write operations except license renewal, sign-out, access verification, member check-in, and facility incident/maintenance operations. Member self-service, read access, and safety-critical access are not license-gated. On tampered/malformed persisted license data, admin writes fail closed with an explicit service error; access/check-in/facility handling remains available.
 
-SKU feature flags and studio/member caps are represented in the license payload but are **not yet enforced at all feature entry points**. Do not rely on the current tier limits as contractual access controls.
+The API enforces SKU feature entitlements on class booking/waitlist creation, branding changes, and edits to partner-network, merchant-perk, and loyalty data. Member enrollment is rejected when the licensed member cap is reached; concurrent enrollment attempts reserve capacity before writing, the demo seed reset checks its target data against the cap, and existing members are grandfathered when a lower-cap license is imported. A new studio record is checked against the studio cap, although the current data model and API expose only one studio record and do not yet support managing multiple studios.
+
+Feature enforcement is limited to those existing API surfaces: facility safety/maintenance workflows remain available, and there are no distinct API surfaces yet for `advanced-admin` or `support-portal`. Treat the SKU matrix as enforced only for the explicitly listed operations, not as a complete product-wide feature gate.
 
 ## Backup, restore, update, and rollback
 
@@ -136,7 +138,10 @@ The diagnostics download does not currently package logs. Review and redact logs
 |---|---|
 | Docker Compose API/UI bundle and persistent NeDB volume | Implemented; single-host reference only |
 | Guided first-run setup and initial admin bootstrap | Implemented as a local CLI prompt; no browser setup wizard |
-| Offline-signed Ed25519 license import and expiry behavior | Implemented; requires vendor key provisioning; studio/member caps and feature gates remain incomplete |
+| Offline-signed Ed25519 license import and expiry behavior | Implemented; requires vendor key provisioning; feature gates cover current class, branding, and network-data write surfaces |
+| SKU feature limits | Enforced for class booking/waitlist creation, branding writes, and network-data edits; not a UI-wide gate; safety/maintenance and unimplemented feature surfaces remain available |
+| Member capacity limit | Enforced for new enrollment, including concurrent requests, and demo seed reset; existing members are grandfathered after a lower-cap license import |
+| Studio capacity limit | Checked before inserting a studio record; multi-studio provisioning is not supported by the current single-studio API/data model |
 | Admin restriction while preserving member access/check-in | Implemented at authenticated admin write boundary, with safety/license-renewal exceptions |
 | White-label name/logo/color/currency | Existing admin configuration |
 | Custom domain / customer mail and SMS delivery | Metadata only; DNS, outbound delivery, and provider integration remain unimplemented |
