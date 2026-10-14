@@ -261,14 +261,14 @@ export const INITIAL_MEMBERS: Member[] = [
 ];
 
 export const INITIAL_STUDIO_DETAILS: StudioDetails = {
-  name: 'APEX ATHLETIC & FITNESS STUDIO',
+  name: 'SAMPLE FITNESS STUDIO',
   tagline: 'High Performance Training, Wellness & Recovery Sanctuary',
-  description: 'Apex Studio is a cutting-edge athletic training facility offering Olympic weightlifting platforms, functional turf zones, premier recovery suites (infrared sauna and cold plunge pools), and world-class instructor-led classes designed for every fitness stage.',
+  description: 'Sample Fitness Studio is an athletic training facility offering Olympic weightlifting platforms, functional turf zones, recovery suites, and instructor-led classes for every fitness stage.',
   address: '450 Ironworks Way, Suite 120',
   cityStateZip: 'Metro City, NY 10001',
-  phone: '+1 (800) 555-APEX (2739)',
-  email: 'concierge@apexstudio.fit',
-  website: 'https://apexstudio.fit',
+  phone: '+1 (555) 010-0100',
+  email: 'hello@sample-fitness-studio.example',
+  website: 'https://sample-fitness-studio.example',
   hours: {
     weekdays: '5:00 AM – 11:00 PM (24/7 for Platinum & VIP)',
     saturday: '6:00 AM – 10:00 PM',
@@ -384,7 +384,7 @@ export const INITIAL_STUDIO_DETAILS: StudioDetails = {
     },
     {
       id: 'CLS-4',
-      name: 'Apex Heavy Bag Boxing',
+      name: 'Heavy Bag Boxing',
       category: 'Boxing',
       trainer: 'Tyson Vance',
       time: '05:30 PM - 06:30 PM',
@@ -479,7 +479,7 @@ export const INITIAL_STUDIO_DETAILS: StudioDetails = {
       id: 'ANN-2',
       title: 'Autumn 6-Week Functional Fitness Challenge',
       date: 'Oct 10, 2026',
-      content: 'Registration is now open! Measure progress via InBody body composition scan and complete challenges for exclusive Apex apparel.',
+      content: 'Registration is now open! Measure progress via InBody body composition scan and complete challenges for exclusive studio apparel.',
       tag: 'Event'
     },
     {
@@ -573,7 +573,7 @@ export const INITIAL_STUDIO_DETAILS: StudioDetails = {
     streakDays: 18,
     activeChallenges: 2,
     challengeTitle: 'Strongest Week',
-    referralCode: 'APEX-ROAM',
+    referralCode: 'GYM-ROAM',
     referralsThisMonth: 3
   }
 };
@@ -591,7 +591,7 @@ export const TIER_CONFIG: Record<
     perks: [
       'Standard gym floor access (6am - 10pm)',
       'Locker room & shower access',
-      'Apex workout tracking app'
+      'Studio workout tracking app'
     ]
   },
   Silver: {

@@ -50,7 +50,7 @@ export const DEFAULT_LICENSE: LicenseConfig = {
     'brand-customization'
   ],
   customDomain: null,
-  emailFrom: 'hello@apexstudio.fit'
+  emailFrom: null
 };
 
 const SKU_FEATURES: Record<LicenseSku, LicenseFeature[]> = {

@@ -39,7 +39,7 @@ Last updated: 2026-10-13 (Phase 5 complete; current Phase 6 SKU checks and membe
 - Phase 4 (initial rollout): facility asset registry, maintenance ticket triage, and operations dashboard summary for asset health and outage tracking.
 - Phase 5 (initial rollout): cross-gym partner network, loyalty passport data, and local merchant-perk marketplace surfaced in the studio detail experience.
 - Phase 6 (initial rollout): single-host Docker Compose API/UI images with a prompted first-run installer and initial-admin bootstrap; Ed25519 offline-signed license generation/import and local signature verification; expired/unlicensed admin write restrictions with explicit access/check-in/facility/renewal exceptions; API feature checks for class booking, branding changes, and network-data edits; serialized member-cap reservations for new enrollment, seed-reset cap validation, and a studio-cap check before studio insertion; admin license status banner; hash-verified NeDB backup/restore and semantic-version image rebuild/rollback helpers; admin data export and sanitized runtime diagnostics; and a deployment runbook documenting limits and setup.
-- Branding: public `GET /api/branding`, admin-only validated `PUT /api/branding`, Branding panel on the admin dashboard, UI-wide name/logo/color/currency formatting, currency-aware contract text.
+- Branding: public `GET /api/branding`, admin-only validated `PUT /api/branding`, Branding panel on the admin dashboard, UI-wide name/logo/color/currency formatting, currency-aware contract text, and neutral sample branding defaults in API/UI/seed data.
 
 ## Known gaps and next steps
 
@@ -47,8 +47,8 @@ Last updated: 2026-10-13 (Phase 5 complete; current Phase 6 SKU checks and membe
 2. Phase 6 still lacks Helm, Terraform, air-gapped image distribution, release registry/provenance and LTS policy, scheduled off-host backup, diagnostics log bundling, and formal support SLAs. The update helper rebuilds a checked-out source tree rather than consuming vendor-signed release artifacts.
 3. Phase 6 exit criteria remain open: Docker build/Compose clean-room validation, independent customer installation within two business days, independent rollback drill, sales-trial sign-off, and production sizing/DR exercises. Docker is unavailable in the current implementation environment; the Compose images were not built here.
 4. Phase 7 payment work: processor selection and tokenization, recurring charges, proration, smart payment dunning/retries, payment reconciliation, wallet-pass synchronization, and payment/settlement-dependent retail, network, family, and corporate workflows.
-5. Apple/Google Wallet pass issuance remains unimplemented; current access pass is in-app QR only. Freeze reminders are in-app only; email/SMS delivery is not configured. SMS/orientation automation, government-ID/selfie KYC, and legal review of the waiver also remain open.
-6. Branding follow-ups: seed/studio data still says "Apex" (`database/seeds/studio.json`, `ui/src/data/mockData.ts`); no light theme or font choice; currency changes formatting only and does not convert prices.
+5. Apple/Google Wallet pass issuance remains unimplemented; current access pass is a 30-second, single-use in-app QR. A wallet design must resolve how that rotating credential maps to wallet barcode refresh, signing credentials, revocation, and offline access before issuance is implemented. Freeze reminders are in-app only; email/SMS delivery is not configured. SMS/orientation automation, government-ID/selfie KYC, and legal review of the waiver also remain open.
+6. Branding follow-ups: no light theme or font choice; currency changes formatting only and does not convert prices. Generic fallback branding affects new/default installations and seed resets; it does not overwrite branding or studio records already persisted in a customer database.
 
 ## Housekeeping
 
@@ -60,6 +60,7 @@ Last updated: 2026-10-13 (Phase 5 complete; current Phase 6 SKU checks and membe
 - `npm run build:api` passed after the entitlement changes.
 - Isolated capacity smoke passed: SKU feature ceilings are applied, concurrent member reservations cannot exceed the configured cap, rejected attempts do not consume a slot, and released slots can be reserved.
 - Isolated API smokes passed: non-entitled branding/network writes, over-cap enrollment before any member/account write, and a seed reset exceeding the member cap are rejected; existing member data and facility safety reads remain available.
+- Sample branding defaults were made customer-neutral; API/UI builds passed, studio seed JSON parses, and the former Apex branding is absent from API/UI defaults and demo studio data.
 
 ## Prior verification (2026-10-12)
 

@@ -44,7 +44,7 @@ export const COUNTRIES = [
 ];
 
 export const DEFAULT_BRANDING: Branding = {
-  name: 'Apex Studio',
+  name: 'Gym Studio',
   tagline: 'Gym & Athletic Club',
   logo: null,
   primaryColor: '#10b981',
